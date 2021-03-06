@@ -76,12 +76,12 @@
   become_user: root
   apt:
     name:
-    - mysql-server-5.7
-    - mysql-server-core-5.7
+    - mysql-server-8.0
+    - mysql-server-core-8.0
     - mysql-common
-    - mysql-client-5.7
-    - mysql-client-core-5.7
-    - libmysqld-dev
+    - mysql-client-8.0
+    - mysql-client-core-8.0
+    - libmysqlclient-dev
     update_cache: yes
 
 - name: Set Temporary password
@@ -99,7 +99,7 @@
   become: yes
   become_user: root
   shell: |
-      mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON *.* TO isucon@localhost IDENTIFIED BY 'isucon' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+      mysql -uroot -proot -e "CREATE USER IF NOT EXISTS 'isucon'@'localhost' IDENTIFIED BY 'isucon'; GRANT ALL PRIVILEGES ON *.* TO 'isucon'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 
 - name: Remove Temporary file
   become: yes

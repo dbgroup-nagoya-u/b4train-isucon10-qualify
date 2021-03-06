@@ -55,11 +55,6 @@ myisam-recover-options  = BACKUP
 #table_open_cache       = 64
 #thread_concurrency     = 10
 #
-# * Query Cache Configuration
-#
-query_cache_limit       = 1M
-query_cache_size        = 16M
-#
 # * Logging and Replication
 #
 # Both location gets rotated by the cronjob.
