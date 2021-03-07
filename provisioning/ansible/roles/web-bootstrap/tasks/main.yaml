@@ -71,62 +71,20 @@
     path: /etc/nginx/sites-enabled/default
     state: absent
 
-- name: Install Package(MYSQL)
+- name: Install PostgreSQL 12
   become: yes
   become_user: root
   apt:
     name:
-    - mysql-server-8.0
-    - mysql-server-core-8.0
-    - mysql-common
-    - mysql-client-8.0
-    - mysql-client-core-8.0
-    - libmysqlclient-dev
+    - postgresql-12
     update_cache: yes
-
-- name: Set Temporary password
-  become: yes
-  become_user: root
-  blockinfile:
-    create: yes
-    dest: &myCnf /root/.my.cnf
-    content: |
-      [client]
-      user = root
-      password = root
 
 - name: Create isucon user on MySQL
   become: yes
-  become_user: root
+  become_user: postgres
   shell: |
-      mysql -uroot -proot -e "CREATE USER IF NOT EXISTS 'isucon'@'localhost' IDENTIFIED BY 'isucon'; GRANT ALL PRIVILEGES ON *.* TO 'isucon'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-
-- name: Remove Temporary file
-  become: yes
-  become_user: root
-  file:
-    path: *myCnf
-    state: absent
-
-- name: Copy mysqld.conf
-  become: yes
-  become_user: root
-  copy:
-    src: "mysqld.cnf"
-    dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
-    owner: "root"
-    group: "root"
-    mode: "0644"
-
-- name: Copy my.conf
-  become: yes
-  become_user: root
-  copy:
-    src: "my.cnf"
-    dest: "/etc/mysql/conf.d/my.cnf"
-    owner: "root"
-    group: "root"
-    mode: "0644"
+      psql -c "psql -c "CREATE ROLE isucon WITH SUPERUSER CREATEDB LOGIN PASSWORD 'isucon'"
+  ignore_errors: yes
 
 - name: Install Faker for Initialize Data
   become: yes
