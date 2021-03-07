@@ -9,10 +9,10 @@
 
 # in B4-training, we assume the use of Go language to run app
 
-- name: Install Go 1.14.7
+- name: Install Go 1.15.8
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/go-install 1.14.7 /home/isucon/local/go
+  command: /tmp/xbuild/go-install 1.15.8 /home/isucon/local/go
 
 - name: Add PATH for Go
   become: yes
