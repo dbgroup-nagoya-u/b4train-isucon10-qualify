@@ -9,10 +9,10 @@
 
 # in B4-training, we assume the use of Go language to run app
 
-- name: Install Go 1.14.7
+- name: Install Go 1.15.8
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/go-install 1.14.7 /home/isucon/local/go
+  command: /tmp/xbuild/go-install 1.15.8 /home/isucon/local/go
 
 - name: Add PATH for Go
   become: yes
@@ -26,10 +26,10 @@
 
 # the script uses Node to run App
 
-- name: Install Node v14.9.0
+- name: Install Node v14.16.0
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/node-install v14.9.0 /home/isucon/local/node
+  command: /tmp/xbuild/node-install v14.16.0 /home/isucon/local/node
 
 - name: Add PATH for Node
   become: yes
@@ -42,10 +42,10 @@
 
 # the script uses Python for App preparation
 
-- name: Install python v3.8.5
+- name: Install python v3.8.8
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/python-install 3.8.5 /home/isucon/local/python
+  command: /tmp/xbuild/python-install 3.8.8 /home/isucon/local/python
 
 - name: Add PATH for python
   become: yes
