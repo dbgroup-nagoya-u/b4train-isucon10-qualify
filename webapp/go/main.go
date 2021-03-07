@@ -777,9 +777,9 @@ INSERT INTO isuumo.estate (
   $7,
   $8,
   $9,
+  $10,
   $11,
-  $12,
-  $13
+  $12
 )`, id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)

@@ -76,14 +76,14 @@
   become_user: root
   apt:
     name:
-    - postgresql-12
+    - postgresql-12 postgresql-12-postgis-3 libpq-dev
     update_cache: yes
 
-- name: Create isucon user on MySQL
+- name: Create isucon user on PostgreSQL
   become: yes
   become_user: postgres
   shell: |
-      psql -c "psql -c "CREATE ROLE isucon WITH SUPERUSER CREATEDB LOGIN PASSWORD 'isucon'"
+      psql -c "CREATE ROLE isucon WITH SUPERUSER CREATEDB LOGIN PASSWORD 'isucon'"
   ignore_errors: yes
 
 - name: Install Faker for Initialize Data
