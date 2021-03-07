@@ -124,7 +124,7 @@
     <<: *env
   shell: |
     createdb isuumo
-    psql -f "webapp/psql/db/0_Schema.sql"
+    psql -f "webapp/psql/db/0_Schema.sql" isuumo
 
 - name: Install frontend packages
   become: yes
