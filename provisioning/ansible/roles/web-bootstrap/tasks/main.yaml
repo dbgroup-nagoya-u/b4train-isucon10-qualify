@@ -86,6 +86,14 @@
       psql -c "CREATE ROLE isucon WITH SUPERUSER CREATEDB LOGIN PASSWORD 'isucon'"
   ignore_errors: yes
 
+- name: Copy .pgpass for password less DB access
+  copy:
+    src: ".pgpass"
+    dest: "/home/isucon/.pgpass"
+    owner: "isucon"
+    group: "isucon"
+    mode: "0600"
+
 - name: Install Faker for Initialize Data
   become: yes
   become_user: root

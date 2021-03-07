@@ -134,11 +134,10 @@ type BoundingBox struct {
 }
 
 type PostgreSQLConnectionEnv struct {
-	Host     string
-	Port     string
-	User     string
-	DBName   string
-	Password string
+	Host   string
+	Port   string
+	User   string
+	DBName string
 }
 
 type RecordMapper struct {
@@ -201,11 +200,10 @@ func (r *RecordMapper) Err() error {
 
 func NewPostgreSQLConnectionEnv() *PostgreSQLConnectionEnv {
 	return &PostgreSQLConnectionEnv{
-		Host:     getEnv("PG_HOST", "127.0.0.1"),
-		Port:     getEnv("PG_PORT", "5432"),
-		User:     getEnv("PG_USER", "isucon"),
-		DBName:   getEnv("PG_DBNAME", "isuumo"),
-		Password: getEnv("PG_PASS", "isucon"),
+		Host:   getEnv("PG_HOST", "127.0.0.1"),
+		Port:   getEnv("PG_PORT", "5432"),
+		User:   getEnv("PG_USER", "isucon"),
+		DBName: getEnv("PG_DBNAME", "isuumo"),
 	}
 }
 
@@ -219,7 +217,7 @@ func getEnv(key, defaultValue string) string {
 
 //ConnectDB isuumoデータベースに接続する
 func (env *PostgreSQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
-	dsn := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", env.User, env.Password, env.Host, env.Port, env.DBName)
+	dsn := fmt.Sprintf("postgres://%v@%v:%v/%v", env.User, env.Host, env.Port, env.DBName)
 	return sqlx.Open("pgx", dsn)
 }
 
