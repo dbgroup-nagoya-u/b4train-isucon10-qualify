@@ -76,7 +76,9 @@
   become_user: root
   apt:
     name:
-    - postgresql-12 postgresql-12-postgis-3 libpq-dev
+    - postgresql-12
+    - postgresql-12-postgis-3
+    - libpq-dev
     update_cache: yes
 
 - name: Create isucon user on PostgreSQL
@@ -113,14 +115,7 @@
   shell: |
     make chair_data && make estate_data
 
-- name: Restart "mysql"
-  systemd:
-    daemon_reload: "yes"
-    name: "mysql"
-    state: "restarted"
-    enabled: "yes"
-
-- name: Setup MySQL
+- name: Setup DB
   become: yes
   become_user: isucon
   args:
@@ -128,7 +123,8 @@
   environment:
     <<: *env
   shell: |
-    mysql -u isucon -pisucon < webapp/mysql/db/0_Schema.sql
+    createdb isuumo
+    psql -f "webapp/psql/db/0_Schema.sql" isuumo
 
 - name: Install frontend packages
   become: yes
