@@ -6,6 +6,7 @@
     "Infof",
     "Rowx",
     "SHOWUNTRACKEDFILES",
+    "chmod",
     "htop",
     "isucon",
     "isuumo",
@@ -14,6 +15,7 @@
     "nazotte",
     "postgres",
     "psql",
+    "sbin",
     "sqlx"
   ]
 }
