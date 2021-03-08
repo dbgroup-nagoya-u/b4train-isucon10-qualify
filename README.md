@@ -1,45 +1,29 @@
-# isucon10-qualify
+# 名古屋大学データベースグループB4研修｜ISUCON10予選問題
 
 ## ディレクトリ構成
 
-```
-.
-├── bench           # ベンチマーカー
-├── initial-data    # 初期データの生成
-├── provisioning    # セットアップ用
-└── webapp          # 各言語の参考実装
-```
+- `bin`: 問題解答時に利用すると便利なスクリプト群．
+- `bottleneck_analysis`: スクリプトによって自動生成されるボトルネックの解析結果．
+- `conf`: 各種設定ファイル．スクリプトによって各サーバへ反映．
+- `webapp`: アプリの実装コード．
 
-## 問題の起動方法
+## 想定環境
 
-1. `initial-data` で初期データを生成する
-2. `webapp` で Docker を用いて問題サーバーを立ち上げる
-3. `bench` で問題サーバーへのベンチマークを実行する
+- OS: Ubuntu 20.04 LTS
+- DB: PostgreSQL 12
+- Webサーバ: Nginx
+- アプリ実装言語: Go
 
-実際のコマンド例については、各ディレクトリの README を参照してください。
+## 参考リンク
 
-
-## 使用データの取得元
-
-- [Faker](https://faker.readthedocs.io/)
-- [いらすとや](https://www.irasutoya.com/)
-
-## ISUCON10 予選のインフラ構成について
-
-- 問題用 (3台)
-    - CPU: 1 Core (AMD EPYC 7352)
-    - Memory: 2 GiB
-    - IO throughput: 100 Mbps
-    - IOPS limit: 200 (Read / Write)
-    - Interface: 1 Gbps
-- ベンチマーカ用 (1台)
-    - CPU: 1 Core  (AMD EPYC 7352)
-    - Memory: 16 GiB
-    - IO throughput: 100 Mbps
-    - IOPS limit: 200 (Read / Write)
-    - Interface: 100 Mbps
-
-## Links
-
+- [ISUCON10 予選リポジトリ](https://github.com/isucon/isucon10-qualify)
 - [ISUCON10 予選レギュレーション](http://isucon.net/archives/54753430.html)
 - [ISUCON10 予選当日マニュアル](https://gist.github.com/progfay/25edb2a9ede4ca478cb3e2422f1f12f6)
+
+## 謝辞
+
+本リポジトリはISUCONによって公開されている上記リポジトリを基に作成しています．ここに記し，感謝の意を表します．
+
+## 注釈
+
+「[ISUCON](https://isucon.net/)」は，LINE株式会社の商標または登録商標です．

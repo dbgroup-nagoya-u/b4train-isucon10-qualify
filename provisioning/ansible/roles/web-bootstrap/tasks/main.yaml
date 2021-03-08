@@ -91,8 +91,6 @@
 - name: Install Faker for Initialize Data
   become: yes
   become_user: isucon
-  environment:
-    <<: *env
   pip:
     executable: pip3
     name: Faker
@@ -103,8 +101,6 @@
   become_user: isucon
   args:
     chdir: /home/isucon/isuumo/initial-data
-  environment:
-    <<: *env
   shell: |
     make chair_data && make estate_data
 
@@ -113,8 +109,6 @@
   become_user: isucon
   args:
     chdir: /home/isucon/isuumo
-  environment:
-    <<: *env
   shell: |
     createdb isuumo
     psql -f "webapp/psql/db/0_Schema.sql" isuumo
@@ -125,7 +119,7 @@
   args:
     chdir: /home/isucon/isuumo/webapp/frontend
   environment:
-    <<: *env
+    PATH: "/home/isucon/local/go/bin:/home/isucon/local/node/bin:/home/isucon/bin:/home/isucon/.local/bin:/usr/bin:/sbin:/bin"
   shell: |
     npm ci
 
@@ -135,7 +129,7 @@
   args:
     chdir: /home/isucon/isuumo/webapp/frontend
   environment:
-    <<: *env
+    PATH: "/home/isucon/local/go/bin:/home/isucon/local/node/bin:/home/isucon/bin:/home/isucon/.local/bin:/usr/bin:/sbin:/bin"
   shell: |
     npm run build
 
@@ -145,7 +139,7 @@
   args:
     chdir: /home/isucon/isuumo/webapp/frontend
   environment:
-    <<: *env
+    PATH: "/home/isucon/local/go/bin:/home/isucon/local/node/bin:/home/isucon/bin:/home/isucon/.local/bin:/usr/bin:/sbin:/bin"
   shell: |
     npm run export
 
