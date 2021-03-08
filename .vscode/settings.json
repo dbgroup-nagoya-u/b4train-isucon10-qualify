@@ -2,13 +2,24 @@
   "cSpell.words": [
     "Beginx",
     "DBNAME",
+    "GOPATH",
     "Infof",
+    "MAINPID",
     "Rowx",
+    "SHOWUNTRACKEDFILES",
+    "blks",
+    "chmod",
+    "htop",
     "isucon",
     "isuumo",
+    "kataribe",
+    "matsuu",
     "nazotte",
+    "plpgsql",
     "postgres",
     "psql",
-    "sqlx"
+    "sbin",
+    "sqlx",
+    "stddev"
   ]
 }

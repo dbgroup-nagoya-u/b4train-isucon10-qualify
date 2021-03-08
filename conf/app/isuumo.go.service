@@ -1,0 +1,21 @@
+[Unit]
+Description=isuumo.go
+
+[Service]
+EnvironmentFile=/home/isucon/env.sh
+WorkingDirectory=${APP_DIR}
+PIDFile=${WorkingDirectory}/server.pid
+
+User=isucon
+Group=isucon
+ExecStart=${WorkingDirectory}/${SERVICE_NAME}
+ExecStop=/bin/kill -s QUIT ${MAINPID}
+
+Restart   = always
+Type      = simple
+
+StandardOutput=${APP_OUT_LOG_PATH}
+StandardError=${APP_ERR_LOG_PATH}
+
+[Install]
+WantedBy=multi-user.target

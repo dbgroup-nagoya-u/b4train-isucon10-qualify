@@ -39,19 +39,3 @@
     path: /home/isucon/.bashrc
     content: |
       export PATH=/home/isucon/local/node/bin:$PATH
-
-# the script uses Python for App preparation
-
-- name: Install python v3.8.8
-  become: yes
-  become_user: isucon
-  command: /tmp/xbuild/python-install 3.8.8 /home/isucon/local/python
-
-- name: Add PATH for python
-  become: yes
-  become_user: isucon
-  blockinfile:
-    marker: "# {mark} ANSIBLE MANAGED BLOCK python"
-    path: /home/isucon/.bashrc
-    content: |
-      export PATH=/home/isucon/local/python/bin:$PATH
