@@ -11,10 +11,8 @@
 
 - name: Copy Service file
   copy:
-    src: "{{ item }}"
+    src: "/home/isucon/isuumo/conf/app/isuumo.go.service"
     dest: "/etc/systemd/system"
     owner: "root"
     group: "root"
     mode: "0644"
-  with_items:
-    - isuumo.go.service

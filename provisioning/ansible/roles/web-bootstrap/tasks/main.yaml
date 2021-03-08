@@ -38,7 +38,7 @@
 
 - name: Deploy nginx.conf
   copy:
-    src: "nginx.conf"
+    src: "/home/isucon/isuumo/conf/nginx/nginx.conf"
     dest: "/etc/nginx/nginx.conf"
     owner: "root"
     group: "root"
@@ -46,7 +46,7 @@
 
 - name: Deploy nginx isuumo.conf
   copy:
-    src: "isuumo.conf"
+    src: "/home/isucon/isuumo/conf/nginx/isuumo.conf"
     dest: "/etc/nginx/sites-available/isuumo.conf"
     owner: "root"
     group: "root"
@@ -82,7 +82,7 @@
 
 - name: Copy .pgpass for password less DB access
   copy:
-    src: ".pgpass"
+    src: "/home/isucon/isuumo/conf/postgresql/pgpass"
     dest: "/home/isucon/.pgpass"
     owner: "isucon"
     group: "isucon"
@@ -159,5 +159,5 @@
   become: yes
   become_user: isucon
   copy:
-    src: "env.sh"
+    src: "/home/isucon/isuumo/conf/env.sh"
     dest: /home/isucon
