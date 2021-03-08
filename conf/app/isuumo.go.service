@@ -3,12 +3,12 @@ Description=isuumo.go
 
 [Service]
 EnvironmentFile=/home/isucon/env.sh
-WorkingDirectory=${APP_DIR}
+WorkingDirectory=/home/isucon/isuumo/webapp/go
 PIDFile=${WorkingDirectory}/server.pid
 
 User=isucon
 Group=isucon
-ExecStart=${WorkingDirectory}/${SERVICE_NAME}
+ExecStart=/home/isucon/isuumo/webapp/go/isuumo
 ExecStop=/bin/kill -s QUIT ${MAINPID}
 
 Restart   = always
