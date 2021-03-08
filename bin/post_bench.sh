@@ -50,15 +50,15 @@ rf -rf ${WORKSPACE}/bottleneck_analysis/*
 
 # create UDF to analyze DB bottleneck
 psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
-  -f "${WORKSPACE}/bin/component/udf_analyze_slow_queries.sql"
+  -f "${WORKSPACE}/conf/bottleneck_analysis/udf_analyze_slow_queries.sql"
 # analyze slow queries
 psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
-  -f "${WORKSPACE}/bin/component/analyze_queries.sql" \
+  -f "${WORKSPACE}/conf/bottleneck_analysis/analyze_queries.sql" \
   > ${WORKSPACE}/bottleneck_analysis/db_summary.txt
 
 # analyze app
 ssh ${WEB_HOST} cat ${NGINX_LOG_PATH} \
-  | kataribe -f ${WORKSPACE}/conf/kataribe.toml \
+  | kataribe -f "${WORKSPACE}/conf/bottleneck_analysis/kataribe.toml" \
   > ${WORKSPACE}/bottleneck_analysis/nginx_summary.txt
 
 # push analysis results
