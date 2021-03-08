@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# constants
-readonly APP_OUT_LOG_PATH="${APP_DIR}/log/app.out"
-readonly APP_ERR_LOG_PATH="${APP_DIR}/log/app.err"
-readonly APP_SERVICE_PATH="/etc/systemd/system/${SERVICE_FILE}"
-
 # compile app with new sources
 cd ${APP_DIR}
 make --quiet

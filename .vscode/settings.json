@@ -6,6 +6,7 @@
     "Infof",
     "Rowx",
     "SHOWUNTRACKEDFILES",
+    "blks",
     "chmod",
     "htop",
     "isucon",
@@ -13,9 +14,11 @@
     "kataribe",
     "matsuu",
     "nazotte",
+    "plpgsql",
     "postgres",
     "psql",
     "sbin",
-    "sqlx"
+    "sqlx",
+    "stddev"
   ]
 }

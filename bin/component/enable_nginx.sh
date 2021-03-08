@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# constants
-readonly NGINX_LOG_PATH="/var/log/nginx/access.log"
-readonly NGINX_CONF_PATH="/etc/nginx/nginx.conf"
-readonly NGINX_SITE_PATH="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
-
 # clear logs
 if [ -f ${NGINX_LOG_PATH} ]; then
   sudo /bin/rm ${NGINX_LOG_PATH}

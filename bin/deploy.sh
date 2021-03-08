@@ -3,10 +3,6 @@ set -ue -o pipefail
 
 # global constants
 readonly WORKSPACE=$(cd $(dirname ${BASH_SOURCE:-${0}})/../; pwd)
-readonly APP_LANG="go"
-readonly APP_DIR="${WORKSPACE}/webapp/${APP_LANG}"
-readonly SERVICE_NAME="isuumo"
-readonly SERVICE_FILE="${SERVICE_NAME}.${APP_LANG}.service"
 
 # run scripts at workspace
 cd ${WORKSPACE}
@@ -37,8 +33,8 @@ if [ ${#} -ne 1 ]; then
 fi
 
 # check whether there is a specified branch
-git fetch origin
 readonly GIT_BRANCH=${1}
+git fetch origin
 if ! git branch --list "${GIT_BRANCH}" | grep "${GIT_BRANCH}" &> /dev/null; then
   echo "There is no branch: ${GIT_BRANCH}" 1>&2
   exit 1

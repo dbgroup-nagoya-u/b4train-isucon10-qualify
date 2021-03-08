@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# constants
-readonly PG_LOG_PATH="/var/log/postgresql/postgresql-12-main.log"
-readonly PG_OVERRIDE_PATH="/etc/postgresql/12/main/conf.d/override.conf"
-readonly PG_HBA_PATH="/etc/postgresql/12/main/pg_hba.conf"
-
 # clear logs
 if [ -f ${PG_LOG_PATH} ]; then
   sudo /bin/rm ${PG_LOG_PATH}
