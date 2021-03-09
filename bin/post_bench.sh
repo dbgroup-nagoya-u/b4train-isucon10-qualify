@@ -65,7 +65,7 @@ ssh ${WEB_HOST} cat ${NGINX_LOG_PATH} \
 
 # push analysis results
 echo "push analysis results to ${GIT_BRANCH}"
-git add --quiet ${WORKSPACE}/bottleneck_analysis
+git add ${WORKSPACE}/bottleneck_analysis
 git commit --quiet -m "add bottleneck analysis results"
 git push --quiet origin ${GIT_BRANCH}
 

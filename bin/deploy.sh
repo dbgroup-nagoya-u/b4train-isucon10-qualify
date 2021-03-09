@@ -74,7 +74,7 @@ done
 # start/enable app daemon
 for APP_HOST in ${APP_HOSTS}; do
   echo "start app service on ${APP_HOST}"
-  ssh ${APP_HOST} ${WORKSPACE}/bin/component/enable_app.sh
+  ssh ${APP_HOST} "export PATH=$PATH; ${WORKSPACE}/bin/component/enable_app.sh"
 done
 
 # start/enable Web daemon
