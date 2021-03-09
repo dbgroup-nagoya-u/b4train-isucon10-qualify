@@ -1,9 +1,8 @@
 #!/bin/bash
 set -ue -o pipefail
 
-# global constants
-readonly WORKSPACE=$(cd $(dirname ${BASH_SOURCE:-${0}})/../; pwd)
-source ${WORKSPACE}/conf/env.sh
+# set global constants
+source ${HOME}/env.sh
 
 # run scripts at workspace
 cd ${WORKSPACE}
@@ -35,7 +34,7 @@ fi
 
 # check whether there is a specified branch
 readonly GIT_BRANCH=${1}
-git fetch origin
+git fetch --quiet origin
 if ! git branch --list "${GIT_BRANCH}" | grep "${GIT_BRANCH}" &> /dev/null; then
   echo "There is no branch: ${GIT_BRANCH}" 1>&2
   exit 1
@@ -46,9 +45,11 @@ fi
 ####################################################################################################
 
 # clear old analysis results
-rf -rf ${WORKSPACE}/bottleneck_analysis/*
+echo "remove old analysis results"
+rm -rf ${WORKSPACE}/bottleneck_analysis/*
 
 # create UDF to analyze DB bottleneck
+echo "analyze DB bottleneck"
 psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
   -f "${WORKSPACE}/conf/bottleneck_analysis/udf_analyze_slow_queries.sql"
 # analyze slow queries
@@ -57,11 +58,15 @@ psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
   > ${WORKSPACE}/bottleneck_analysis/db_summary.txt
 
 # analyze app
+echo "analyze App bottleneck"
 ssh ${WEB_HOST} cat ${NGINX_LOG_PATH} \
   | kataribe -f "${WORKSPACE}/conf/bottleneck_analysis/kataribe.toml" \
   > ${WORKSPACE}/bottleneck_analysis/nginx_summary.txt
 
 # push analysis results
-git add ${WORKSPACE}/bottleneck_analysis
-git commit -m "add bottleneck analysis results"
-git push origin ${GIT_BRANCH}
+echo "push analysis results to ${GIT_BRANCH}"
+git add --quiet ${WORKSPACE}/bottleneck_analysis
+git commit --quiet -m "add bottleneck analysis results"
+git push --quiet origin ${GIT_BRANCH}
+
+echo "done."

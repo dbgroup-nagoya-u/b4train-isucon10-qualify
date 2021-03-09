@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# set global constants
+source ${HOME}/env.sh
+
 # copy new environment variables
 cp -b ${WORKSPACE}/conf/env.sh ${HOME}/env.sh
 

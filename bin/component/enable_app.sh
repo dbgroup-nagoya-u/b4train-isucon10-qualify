@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# set global constants
+source ${HOME}/env.sh
+
 # compile app with new sources
 cd ${APP_DIR}
 make --quiet
@@ -16,8 +19,8 @@ touch ${APP_ERR_LOG_PATH}
 
 # apply new settings
 sudo /bin/cp -b ${WORKSPACE}/conf/app/${SERVICE_FILE} ${APP_SERVICE_PATH}
-sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl --quiet daemon-reload
 
 # reload service
-sudo /bin/systemctl start ${SERVICE_FILE}
-sudo /bin/systemctl enable ${SERVICE_FILE}
+sudo /bin/systemctl --quiet start ${SERVICE_FILE}
+sudo /bin/systemctl --quiet enable ${SERVICE_FILE}

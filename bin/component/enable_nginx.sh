@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# set global constants
+source ${HOME}/env.sh
+
 # clear logs
 if [ -f ${NGINX_LOG_PATH} ]; then
   sudo /bin/rm ${NGINX_LOG_PATH}
@@ -15,5 +18,5 @@ sudo /bin/cp -b ${WORKSPACE}/conf/nginx/${SERVICE_NAME}.conf ${NGINX_SITE_PATH}
 sudo /bin/chmod 644 ${NGINX_SITE_PATH}
 
 # reload service
-sudo /bin/systemctl start nginx.service
-sudo /bin/systemctl enable nginx.service
+sudo /bin/systemctl --quiet start nginx.service
+sudo /bin/systemctl --quiet enable nginx.service

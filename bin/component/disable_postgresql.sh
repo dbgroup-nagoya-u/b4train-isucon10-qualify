@@ -1,4 +1,7 @@
 #!/bin/bash
 
-sudo /bin/systemctl stop postgresql.service
-sudo /bin/systemctl disable postgresql.service
+# set global constants
+source ${HOME}/env.sh
+
+sudo /bin/systemctl --quiet stop postgresql.service
+sudo /bin/systemctl --quiet disable postgresql.service

@@ -14,8 +14,8 @@ ExecStop=/bin/kill -s QUIT ${MAINPID}
 Restart   = always
 Type      = simple
 
-StandardOutput=${APP_OUT_LOG_PATH}
-StandardError=${APP_ERR_LOG_PATH}
+StandardOutput=/home/isucon/isuumo/webapp/go/log/app.out
+StandardError=/home/isucon/isuumo/webapp/go/log/app.err
 
 [Install]
 WantedBy=multi-user.target

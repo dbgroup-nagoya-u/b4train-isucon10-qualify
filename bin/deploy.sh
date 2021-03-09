@@ -1,8 +1,8 @@
 #!/bin/bash
 set -ue -o pipefail
 
-# global constants
-readonly WORKSPACE=$(cd $(dirname ${BASH_SOURCE:-${0}})/../; pwd)
+# set global constants
+source ${HOME}/env.sh
 
 # run scripts at workspace
 cd ${WORKSPACE}
@@ -34,7 +34,7 @@ fi
 
 # check whether there is a specified branch
 readonly GIT_BRANCH=${1}
-git fetch origin
+git fetch --quiet origin
 if ! git branch --list "${GIT_BRANCH}" | grep "${GIT_BRANCH}" &> /dev/null; then
   echo "There is no branch: ${GIT_BRANCH}" 1>&2
   exit 1
@@ -80,3 +80,5 @@ done
 # start/enable Web daemon
 echo "start web service on ${WEB_HOST}"
 ssh ${WEB_HOST} ${WORKSPACE}/bin/component/enable_nginx.sh
+
+echo "done."
