@@ -10,6 +10,12 @@ fi
 sudo /usr/bin/touch ${NGINX_LOG_PATH}
 sudo /bin/chown www-data:adm ${NGINX_LOG_PATH}
 sudo /bin/chmod 640 ${NGINX_LOG_PATH}
+if [ -f ${NGINX_ERR_LOG_PATH} ]; then
+  sudo /bin/rm ${NGINX_ERR_LOG_PATH}
+fi
+sudo /usr/bin/touch ${NGINX_ERR_LOG_PATH}
+sudo /bin/chown www-data:adm ${NGINX_ERR_LOG_PATH}
+sudo /bin/chmod 640 ${NGINX_ERR_LOG_PATH}
 
 # apply new settings
 sudo /bin/cp -b ${WORKSPACE}/conf/nginx/nginx.conf ${NGINX_CONF_PATH}

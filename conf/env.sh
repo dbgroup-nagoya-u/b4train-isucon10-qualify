@@ -21,6 +21,7 @@ APP_SERVICE_PATH="/etc/systemd/system/${SERVICE_FILE}"
 
 # Nginx static file settings
 NGINX_LOG_PATH="/var/log/nginx/access.log"
+NGINX_ERR_LOG_PATH="/var/log/nginx/error.log"
 NGINX_CONF_PATH="/etc/nginx/nginx.conf"
 NGINX_SITE_PATH="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
 
