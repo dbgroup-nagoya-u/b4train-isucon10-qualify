@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# set global constants
+source ${HOME}/env.sh
+
 # clear logs
 if [ -f ${PG_LOG_PATH} ]; then
   sudo /bin/rm ${PG_LOG_PATH}
@@ -21,5 +24,5 @@ sudo /bin/chown postgres:postgres ${PG_HBA_PATH}
 sudo /bin/chmod 640 ${PG_HBA_PATH}
 
 # reload service
-sudo /bin/systemctl start postgresql.service
-sudo /bin/systemctl enable postgresql.service
+sudo /bin/systemctl --quiet start postgresql.service
+sudo /bin/systemctl --quiet enable postgresql.service

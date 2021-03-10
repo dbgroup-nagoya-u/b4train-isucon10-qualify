@@ -1,0 +1,7 @@
+[random-write]
+size=16m
+direct=1
+bs=4k
+numjobs=1
+rw=randwrite
+filename=/tmp/fio_rand_target

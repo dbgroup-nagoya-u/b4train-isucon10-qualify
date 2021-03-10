@@ -1,0 +1,7 @@
+[random-read]
+size=16m
+direct=1
+bs=4k
+numjobs=1
+rw=randread
+filename=/tmp/fio_rand_target

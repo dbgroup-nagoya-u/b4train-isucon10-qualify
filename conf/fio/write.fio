@@ -1,0 +1,7 @@
+[sequential-write]
+size=128m
+direct=1
+bs=1024k
+numjobs=1
+rw=write
+filename=/tmp/fio_seq_target

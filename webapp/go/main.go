@@ -875,7 +875,7 @@ SELECT
 FROM
   isuumo.estate
 WHERE
-`
+  `
 	countQuery := `
 SELECT
   COUNT(*)

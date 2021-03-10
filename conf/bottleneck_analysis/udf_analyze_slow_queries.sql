@@ -1,4 +1,4 @@
-DROP FUNCTION analyze_slow_queries;
+DROP FUNCTION IF EXISTS analyze_slow_queries;
 
 CREATE FUNCTION analyze_slow_queries (
   order_by TEXT,
