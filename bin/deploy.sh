@@ -52,6 +52,9 @@ git merge --quiet "origin/${GIT_BRANCH}"
 echo "Load new environment variables..."
 source ${WORKSPACE}/conf/env.sh
 
+# apply new host information
+sudo cp -b ${WORKSPACE}/conf/hosts /etc/hosts
+
 # initialization
 echo "Initialize a worker [${WORKERS}]..."
 for WORKER in ${WORKERS}; do

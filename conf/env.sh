@@ -2,11 +2,11 @@
 WORKSPACE="/home/isucon/isuumo"
 
 # server declaration
-WORKERS="127.0.0.1"
-#WORKERS="192.168.207.51 192.168.207.52 192.168.207.53" # use space for delimiter
-WEB_HOST="127.0.0.1"
-APP_HOSTS="127.0.0.1"
-DB_HOSTS="127.0.0.1"
+WORKERS="localhost"
+#WORKERS="worker1 worker2 worker3" # use space for delimiter
+WEB_HOST="localhost"
+APP_HOSTS="localhost"
+DB_HOSTS="localhost"
 
 # app declaration
 APP_LANG="go"
@@ -26,7 +26,7 @@ NGINX_CONF_PATH="/etc/nginx/nginx.conf"
 NGINX_SITE_PATH="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
 
 # DB settings
-PG_HOST="127.0.0.1"
+PG_HOST="localhost"
 PG_PORT="5432"
 PG_USER="isucon"
 PG_DBNAME="isuumo"
