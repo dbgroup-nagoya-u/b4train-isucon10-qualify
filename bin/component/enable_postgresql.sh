@@ -16,7 +16,7 @@ cp -b ${WORKSPACE}/conf/postgresql/pgpass ${HOME}/.pgpass
 chmod 600 ${HOME}/.pgpass
 
 # apply new DB settings
-sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/override.conf ${PG_OVERRIDE_PATH}
+sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/0_base_settings.conf ${PG_OVERRIDE_PATH}
 sudo /bin/chown postgres:postgres ${PG_OVERRIDE_PATH}
 sudo /bin/chmod 644 ${PG_OVERRIDE_PATH}
 sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/pg_hba.conf ${PG_HBA_PATH}
