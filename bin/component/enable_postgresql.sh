@@ -11,10 +11,6 @@ sudo /usr/bin/touch ${PG_LOG_PATH}
 sudo /bin/chown postgres:adm ${PG_LOG_PATH}
 sudo /bin/chmod 640 ${PG_LOG_PATH}
 
-# apply new authorization settings
-cp -b ${WORKSPACE}/conf/postgresql/pgpass ${HOME}/.pgpass
-chmod 600 ${HOME}/.pgpass
-
 # apply new DB settings
 sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/0_base_settings.conf ${PG_OVERRIDE_PATH}
 sudo /bin/chown postgres:postgres ${PG_OVERRIDE_PATH}
