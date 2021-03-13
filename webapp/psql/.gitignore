@@ -1,2 +1,6 @@
 db/1_DummyEstateData.sql
 db/2_DummyChairData.sql
+*.csv
+*.gz
+*.bz
+*.zst
