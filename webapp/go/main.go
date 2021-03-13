@@ -738,7 +738,7 @@ OFFSET
 `
 
 	var res ChairSearchResponse
-	err = pool.QueryRow(context.Background(), countQuery+searchCondition).Scan(&res.Count)
+	err = pool.QueryRow(context.Background(), countQuery+searchCondition, params...).Scan(&res.Count)
 	if err != nil {
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1280,22 +1280,22 @@ ORDER BY
 
 	estatesInPolygon := []Estate{}
 	for _, estate := range estatesInBoundingBox {
-		const filterQuery = `
+		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
+		filterQuery := `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   id = $1
-  AND ST_Contains(ST_PolygonFromText($2), ST_GeomFromText($3))
+  AND ST_Contains(
+    ST_PolygonFromText(` + coordinates.coordinatesToText() + `),
+    ST_GeomFromText(` + point + `)
+  )
 `
-		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
 
 		validatedEstate := Estate{}
-		row := pool.QueryRow(
-			context.Background(), filterQuery,
-			estate.ID, coordinates.coordinatesToText(), point,
-		)
+		row := pool.QueryRow(context.Background(), filterQuery, estate.ID)
 		err = RowToEstate(&row, &validatedEstate)
 		if err != nil {
 			if err == pgx.ErrNoRows {
