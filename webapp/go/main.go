@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
@@ -28,6 +28,10 @@ var db *sqlx.DB
 var pgConnectionData *PostgreSQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
+
+/*====================================================================================*
+ * Type definitions
+ *====================================================================================*/
 
 type InitializeResponse struct {
 	Language string `json:"language"`
@@ -147,6 +151,10 @@ type RecordMapper struct {
 	err    error
 }
 
+/*====================================================================================*
+ * Utility functions: parse record strings to values
+ *====================================================================================*/
+
 func (r *RecordMapper) next() (string, error) {
 	if r.err != nil {
 		return "", r.err
@@ -198,13 +206,119 @@ func (r *RecordMapper) Err() error {
 	return r.err
 }
 
-func NewPostgreSQLConnectionEnv() *PostgreSQLConnectionEnv {
-	return &PostgreSQLConnectionEnv{
-		Host:   getEnv("PG_HOST", "127.0.0.1"),
-		Port:   getEnv("PG_PORT", "5432"),
-		User:   getEnv("PG_USER", "isucon"),
-		DBName: getEnv("PG_DBNAME", "isuumo"),
+/*====================================================================================*
+ * Utility functions: scan rows as struct
+ *====================================================================================*/
+
+func RowToChair(row *pgx.Row, chair *Chair) error {
+	return (*row).Scan(
+		&chair.ID,
+		&chair.Name,
+		&chair.Description,
+		&chair.Thumbnail,
+		&chair.Price,
+		&chair.Height,
+		&chair.Width,
+		&chair.Depth,
+		&chair.Color,
+		&chair.Features,
+		&chair.Kind,
+		&chair.Popularity,
+		&chair.Stock,
+	)
+}
+
+func RowsToChair(rows *pgx.Rows, chair *Chair) error {
+	return (*rows).Scan(
+		&chair.ID,
+		&chair.Name,
+		&chair.Description,
+		&chair.Thumbnail,
+		&chair.Price,
+		&chair.Height,
+		&chair.Width,
+		&chair.Depth,
+		&chair.Color,
+		&chair.Features,
+		&chair.Kind,
+		&chair.Popularity,
+		&chair.Stock,
+	)
+}
+
+func ScanChairs(rows *pgx.Rows, chairs *[]Chair) error {
+	for (*rows).Next() {
+		chair := Chair{}
+		err := RowsToChair(rows, &chair)
+		if err != nil {
+			return err
+		}
+		*chairs = append(*chairs, chair)
 	}
+	return (*rows).Err()
+}
+
+func RowToEstate(row *pgx.Row, estate *Estate) error {
+	return (*row).Scan(
+		&estate.ID,
+		&estate.Name,
+		&estate.Description,
+		&estate.Thumbnail,
+		&estate.Address,
+		&estate.Latitude,
+		&estate.Longitude,
+		&estate.Rent,
+		&estate.DoorHeight,
+		&estate.DoorWidth,
+		&estate.Features,
+		&estate.Popularity,
+	)
+}
+
+func RowsToEstate(rows *pgx.Rows, estate *Estate) error {
+	return (*rows).Scan(
+		&estate.ID,
+		&estate.Name,
+		&estate.Description,
+		&estate.Thumbnail,
+		&estate.Address,
+		&estate.Latitude,
+		&estate.Longitude,
+		&estate.Rent,
+		&estate.DoorHeight,
+		&estate.DoorWidth,
+		&estate.Features,
+		&estate.Popularity,
+	)
+}
+
+func ScanEstates(rows *pgx.Rows, estates *[]Estate) error {
+	for (*rows).Next() {
+		estate := Estate{}
+		err := RowsToEstate(rows, &estate)
+		if err != nil {
+			return err
+		}
+		*estates = append(*estates, estate)
+	}
+	return (*rows).Err()
+}
+
+/*====================================================================================*
+ * Utility functions: getters
+ *====================================================================================*/
+
+func getRange(cond RangeCondition, rangeID string) (*Range, error) {
+	RangeIndex, err := strconv.Atoi(rangeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if RangeIndex < 0 || len(cond.Ranges) <= RangeIndex {
+		return nil, fmt.Errorf("Unexpected Range ID")
+	}
+
+	return cond.Ranges[RangeIndex], nil
 }
 
 func getEnv(key, defaultValue string) string {
@@ -215,10 +329,35 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+/*====================================================================================*
+ * Utility functions: DB connection
+ *====================================================================================*/
+
+func NewPostgreSQLConnectionEnv() *PostgreSQLConnectionEnv {
+	return &PostgreSQLConnectionEnv{
+		Host:   getEnv("DB_HOST", "localhost"),
+		Port:   getEnv("PGPORT", "5432"),
+		User:   getEnv("PGUSER", "isucon"),
+		DBName: getEnv("DB_NAME", "isuumo"),
+	}
+}
+
 //ConnectDB isuumoデータベースに接続する
 func (env *PostgreSQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
 	dsn := fmt.Sprintf("postgres://%v@%v:%v/%v", env.User, env.Host, env.Port, env.DBName)
 	return sqlx.Open("pgx", dsn)
+}
+
+/*====================================================================================*
+ * Utility functions: others
+ *====================================================================================*/
+
+func (cs Coordinates) coordinatesToText() string {
+	points := make([]string, 0, len(cs.Coordinates))
+	for _, c := range cs.Coordinates {
+		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
+	}
+	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
 }
 
 func init() {
@@ -236,6 +375,10 @@ func init() {
 	}
 	json.Unmarshal(jsonText, &estateSearchCondition)
 }
+
+/*====================================================================================*
+ * Main function
+ *====================================================================================*/
 
 func main() {
 	// Echo instance
@@ -283,6 +426,10 @@ func main() {
 	e.Logger.Fatal(e.Start(serverPort))
 }
 
+/*====================================================================================*
+ * Initialization API
+ *====================================================================================*/
+
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "psql", "db")
 	absPath, _ := filepath.Abs(sqlDir)
@@ -297,6 +444,10 @@ func initialize(c echo.Context) error {
 	})
 }
 
+/*====================================================================================*
+ * Chair APIs
+ *====================================================================================*/
+
 func getChairDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -305,7 +456,7 @@ func getChairDetail(c echo.Context) error {
 	}
 
 	chair := Chair{}
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -523,14 +674,14 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := `
+	const searchQuery = `
 SELECT
   *
 FROM
   isuumo.chair
 WHERE
   `
-	countQuery := `
+	const countQuery = `
 SELECT
   COUNT(*)
 FROM
@@ -643,7 +794,7 @@ func getChairSearchCondition(c echo.Context) error {
 
 func getLowPricedChair(c echo.Context) error {
 	var chairs []Chair
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -667,6 +818,10 @@ LIMIT $1
 
 	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
 }
+
+/*====================================================================================*
+ * Estate APIs
+ *====================================================================================*/
 
 func getEstateDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -694,19 +849,6 @@ WHERE
 	}
 
 	return c.JSON(http.StatusOK, estate)
-}
-
-func getRange(cond RangeCondition, rangeID string) (*Range, error) {
-	RangeIndex, err := strconv.Atoi(rangeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if RangeIndex < 0 || len(cond.Ranges) <= RangeIndex {
-		return nil, fmt.Errorf("Unexpected Range ID")
-	}
-
-	return cond.Ranges[RangeIndex], nil
 }
 
 func postEstate(c echo.Context) error {
@@ -869,14 +1011,14 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := `
+	const searchQuery = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   `
-	countQuery := `
+	const countQuery = `
 SELECT
   COUNT(*)
 FROM
@@ -917,7 +1059,7 @@ OFFSET $` + strconv.Itoa(len(params)+2) + `
 
 func getLowPricedEstate(c echo.Context) error {
 	estates := make([]Estate, 0, Limit)
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -948,7 +1090,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	}
 
 	chair := Chair{}
-	query := `
+	const chairQuery = `
 SELECT
   *
 FROM
@@ -956,7 +1098,7 @@ FROM
 WHERE
   id = $1
 `
-	err = db.Get(&chair, query, id)
+	err = db.Get(&chair, chairQuery, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Logger().Infof("Requested chair id \"%v\" not found", id)
@@ -970,7 +1112,7 @@ WHERE
 	w := chair.Width
 	h := chair.Height
 	d := chair.Depth
-	query = `
+	const estateQuery = `
 SELECT
   *
 FROM
@@ -987,7 +1129,7 @@ ORDER BY
   id ASC
 LIMIT $13
 `
-	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
+	err = db.Select(&estates, estateQuery, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
@@ -1013,7 +1155,7 @@ func searchEstateNazotte(c echo.Context) error {
 
 	b := coordinates.getBoundingBox()
 	estatesInBoundingBox := []Estate{}
-	query := `
+	const extractQuery = `
 SELECT
   *
 FROM
@@ -1027,7 +1169,7 @@ ORDER BY
   popularity DESC,
   id ASC
 `
-	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
+	err = db.Select(&estatesInBoundingBox, extractQuery, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
 		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
@@ -1041,16 +1183,16 @@ ORDER BY
 		validatedEstate := Estate{}
 
 		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
-		query := fmt.Sprintf(`
+		const filterQuery = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   id = $1
-  AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(%s))
-`, coordinates.coordinatesToText(), point)
-		err = db.Get(&validatedEstate, query, estate.ID)
+  AND ST_Contains(ST_PolygonFromText($2), ST_GeomFromText($3))
+`
+		err = db.Get(&validatedEstate, filterQuery, estate.ID, coordinates.coordinatesToText(), point)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				continue
@@ -1095,7 +1237,7 @@ func postEstateRequestDocument(c echo.Context) error {
 	}
 
 	estate := Estate{}
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -1145,12 +1287,4 @@ func (cs Coordinates) getBoundingBox() BoundingBox {
 		}
 	}
 	return boundingBox
-}
-
-func (cs Coordinates) coordinatesToText() string {
-	points := make([]string, 0, len(cs.Coordinates))
-	for _, c := range cs.Coordinates {
-		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
-	}
-	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
 }
