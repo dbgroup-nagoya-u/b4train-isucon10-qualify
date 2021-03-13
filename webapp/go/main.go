@@ -247,7 +247,7 @@ func RowsToChair(rows *pgx.Rows, chair *Chair) error {
 
 func ScanChairs(rows *pgx.Rows, chairs *[]Chair) error {
 	for (*rows).Next() {
-		var chair Chair
+		chair := Chair{}
 		err := RowsToChair(rows, &chair)
 		if err != nil {
 			return err
@@ -293,7 +293,7 @@ func RowsToEstate(rows *pgx.Rows, estate *Estate) error {
 
 func ScanEstates(rows *pgx.Rows, estates *[]Estate) error {
 	for (*rows).Next() {
-		var estate Estate
+		estate := Estate{}
 		err := RowsToEstate(rows, &estate)
 		if err != nil {
 			return err
@@ -496,7 +496,7 @@ WHERE
   id = $1
 `
 
-	var chair Chair
+	chair := Chair{}
 	row := pool.QueryRow(context.Background(), query, id)
 	err = RowToChair(&row, &chair)
 	if err != nil {
@@ -755,7 +755,7 @@ OFFSET
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var chairs []Chair
+	chairs := []Chair{}
 	err = ScanChairs(&rows, &chairs)
 	if err != nil {
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
@@ -803,7 +803,7 @@ WHERE
 FOR UPDATE
 `
 	row := tx.QueryRow(context.Background(), chairQuery, id)
-	var chair Chair
+	chair := Chair{}
 	err = RowToChair(&row, &chair)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -864,7 +864,7 @@ LIMIT $1
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var chairs []Chair
+	chairs := []Chair{}
 	err = ScanChairs(&rows, &chairs)
 	if err != nil {
 		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
@@ -895,7 +895,7 @@ WHERE
 `
 
 	row := pool.QueryRow(context.Background(), query, id)
-	var estate Estate
+	estate := Estate{}
 	RowToEstate(&row, &estate)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -1117,7 +1117,7 @@ OFFSET $` + strconv.Itoa(len(params)+2) + `
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estates []Estate
+	estates := []Estate{}
 	err = ScanEstates(&rows, &estates)
 	if err != nil {
 		c.Logger().Errorf("searchEstates DB execution error : %v", err)
@@ -1149,8 +1149,8 @@ LIMIT $1
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estates []Estate
-	ScanEstates(&rows, &estates)
+	estates := []Estate{}
+	err = ScanEstates(&rows, &estates)
 	if err != nil {
 		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1174,8 +1174,9 @@ FROM
 WHERE
   id = $1
 `
-	var chair Chair
-	err = pool.QueryRow(context.Background(), chairQuery, id).Scan(&chair)
+	chair := Chair{}
+	row := pool.QueryRow(context.Background(), chairQuery, id)
+	err = RowToChair(&row, &chair)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.Logger().Infof("Requested chair id \"%v\" not found", id)
@@ -1218,7 +1219,7 @@ LIMIT $13
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estates []Estate
+	estates := []Estate{}
 	err = ScanEstates(&rows, &estates)
 	if err != nil {
 		c.Logger().Errorf("Database execution error : %v", err)
@@ -1270,14 +1271,14 @@ ORDER BY
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estatesInBoundingBox []Estate
+	estatesInBoundingBox := []Estate{}
 	err = ScanEstates(&rows, &estatesInBoundingBox)
 	if err != nil {
 		c.Echo().Logger.Errorf("database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estatesInPolygon []Estate
+	estatesInPolygon := []Estate{}
 	for _, estate := range estatesInBoundingBox {
 		const filterQuery = `
 SELECT
@@ -1290,11 +1291,12 @@ WHERE
 `
 		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
 
-		var validatedEstate Estate
-		err = pool.QueryRow(
+		validatedEstate := Estate{}
+		row := pool.QueryRow(
 			context.Background(), filterQuery,
 			estate.ID, coordinates.coordinatesToText(), point,
-		).Scan(&validatedEstate)
+		)
+		err = RowToEstate(&row, &validatedEstate)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				continue
@@ -1347,8 +1349,9 @@ WHERE
   id = $1
 `
 
-	var estate Estate
-	err = pool.QueryRow(context.Background(), query, id).Scan(&estate)
+	estate := Estate{}
+	row := pool.QueryRow(context.Background(), query, id)
+	err = RowToEstate(&row, &estate)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return c.NoContent(http.StatusNotFound)
