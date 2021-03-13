@@ -6,7 +6,8 @@ WORKERS="localhost"
 #WORKERS="worker1 worker2 worker3" # use space for delimiter
 WEB_HOST="localhost"
 APP_HOSTS="localhost"
-DB_HOSTS="localhost"
+#APP_HOSTS="worker1 worker2 worker3" # use space for delimiter
+DB_HOST="localhost"
 
 # app declaration
 APP_LANG="go"
@@ -26,12 +27,13 @@ NGINX_CONF_PATH="/etc/nginx/nginx.conf"
 NGINX_SITE_PATH="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
 
 # DB settings
-PG_HOST="localhost"
-PG_PORT="5432"
-PG_USER="isucon"
-PG_DBNAME="isuumo"
+PGPORT="5432"
+PGUSER="isucon"
+DB_NAME="isuumo"
 
 # DB static file settings
 PG_LOG_PATH="/var/log/postgresql/postgresql-12-main.log"
-PG_OVERRIDE_PATH="/etc/postgresql/12/main/conf.d/override.conf"
-PG_HBA_PATH="/etc/postgresql/12/main/pg_hba.conf"
+PG_CONF_DIR="/etc/postgresql/12/main"
+PG_BASE_CONF_FILE="0_base_settings.conf"
+PG_OVERRIDE_PATH="${PG_CONF_DIR}/conf.d/${PG_BASE_CONF_FILE}"
+PG_HBA_PATH="${PG_CONF_DIR}/pg_hba.conf"
