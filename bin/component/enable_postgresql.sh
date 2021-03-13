@@ -12,9 +12,9 @@ sudo /bin/chown postgres:adm ${PG_LOG_PATH}
 sudo /bin/chmod 640 ${PG_LOG_PATH}
 
 # apply new DB settings
-sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/0_base_settings.conf ${PG_OVERRIDE_PATH}
-sudo /bin/chown postgres:postgres ${PG_OVERRIDE_PATH}
-sudo /bin/chmod 644 ${PG_OVERRIDE_PATH}
+sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/${PG_BASE_CONF_FILE} ${PG_BASE_CONF_PATH}
+sudo /bin/chown postgres:postgres ${PG_BASE_CONF_PATH}
+sudo /bin/chmod 644 ${PG_BASE_CONF_PATH}
 sudo /bin/cp -b ${WORKSPACE}/conf/postgresql/pg_hba.conf ${PG_HBA_PATH}
 sudo /bin/chown postgres:postgres ${PG_HBA_PATH}
 sudo /bin/chmod 640 ${PG_HBA_PATH}

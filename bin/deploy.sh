@@ -45,6 +45,7 @@ fi
 ####################################################################################################
 
 # sync local sources with remote ones
+echo "checkout branch..."
 git checkout --quiet "${GIT_BRANCH}"
 git merge --quiet "origin/${GIT_BRANCH}"
 
@@ -61,7 +62,7 @@ for WORKER in ${WORKERS}; do
   echo "${WORKER}:"
   echo "  fetch remote sources..."
   ssh ${WORKER} ${WORKSPACE}/bin/component/fetch_branch.sh "${GIT_BRANCH}"
-  echo "  disable all services..."
+  echo "  disable all daemons..."
   ssh ${WORKER} ${WORKSPACE}/bin/component/disable_all.sh
   echo "  update server environment..."
   ssh ${WORKER} ${WORKSPACE}/bin/component/environment.sh
@@ -69,19 +70,17 @@ for WORKER in ${WORKERS}; do
 done
 
 # start/enable DB daemon
-for DB_HOST in ${DB_HOSTS}; do
-  echo "start database service on ${DB_HOST}"
-  ssh ${DB_HOST} ${WORKSPACE}/bin/component/enable_postgresql.sh
-done
+echo "start database daemon on ${DB_HOST}"
+ssh ${DB_HOST} ${WORKSPACE}/bin/component/enable_postgresql.sh
 
 # start/enable app daemon
 for APP_HOST in ${APP_HOSTS}; do
-  echo "start app service on ${APP_HOST}"
+  echo "start app daemon on ${APP_HOST}"
   ssh ${APP_HOST} "export PATH=$PATH; ${WORKSPACE}/bin/component/enable_app.sh"
 done
 
 # start/enable Web daemon
-echo "start web service on ${WEB_HOST}"
+echo "start web daemon on ${WEB_HOST}"
 ssh ${WEB_HOST} ${WORKSPACE}/bin/component/enable_nginx.sh
 
 echo "done."
