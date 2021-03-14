@@ -5,11 +5,14 @@
     "GOPATH",
     "Infof",
     "MAINPID",
+    "PGUSER",
     "Rowx",
     "SHOWUNTRACKEDFILES",
     "blks",
     "chmod",
+    "createdb",
     "htop",
+    "iperf",
     "isucon",
     "isuumo",
     "kataribe",
@@ -20,6 +23,7 @@
     "psql",
     "sbin",
     "sqlx",
-    "stddev"
+    "stddev",
+    "zstd"
   ]
 }

@@ -50,10 +50,10 @@ rm -rf ${WORKSPACE}/bottleneck_analysis/*
 
 # create UDF to analyze DB bottleneck
 echo "analyze DB bottleneck"
-psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
+psql -h ${DB_HOST} -p ${PGPORT} -U ${PGUSER} -d ${DB_NAME} \
   -f "${WORKSPACE}/conf/bottleneck_analysis/udf_analyze_slow_queries.sql"
 # analyze slow queries
-psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DBNAME} \
+psql -h ${DB_HOST} -p ${PGPORT} -U ${PGUSER} -d ${DB_NAME} \
   -f "${WORKSPACE}/conf/bottleneck_analysis/analyze_queries.sql" \
   > ${WORKSPACE}/bottleneck_analysis/db_summary.txt
 

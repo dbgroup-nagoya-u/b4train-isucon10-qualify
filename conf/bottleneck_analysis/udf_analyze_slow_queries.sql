@@ -40,7 +40,7 @@ BEGIN
           END
         DESC
       ),
-      regexp_replace(stat.query, '\([, $0-9()]+\)','(*)'),
+      regexp_replace(stat.query, '\([, $0-9()"a-z_]+\)','(*)'),
       stat.calls,
       to_char(stat.total_time, '99999.999'),
       to_char(stat.mean_time, '9999.999'),

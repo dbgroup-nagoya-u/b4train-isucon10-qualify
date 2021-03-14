@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -13,9 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/jackc/pgx/v4"
-	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/jmoiron/sqlx"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
@@ -24,10 +23,14 @@ import (
 const Limit = 20
 const NazotteLimit = 50
 
-var db *sqlx.DB
-var pgConnectionData *PostgreSQLConnectionEnv
+var pool *pgxpool.Pool
+var pgConnectionData *DBConnEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
+
+/*====================================================================================*
+ * Type definitions
+ *====================================================================================*/
 
 type InitializeResponse struct {
 	Language string `json:"language"`
@@ -133,7 +136,7 @@ type BoundingBox struct {
 	BottomRightCorner Coordinate
 }
 
-type PostgreSQLConnectionEnv struct {
+type DBConnEnv struct {
 	Host   string
 	Port   string
 	User   string
@@ -146,6 +149,10 @@ type RecordMapper struct {
 	offset int
 	err    error
 }
+
+/*====================================================================================*
+ * Utility functions: parse record strings to values
+ *====================================================================================*/
 
 func (r *RecordMapper) next() (string, error) {
 	if r.err != nil {
@@ -198,13 +205,147 @@ func (r *RecordMapper) Err() error {
 	return r.err
 }
 
-func NewPostgreSQLConnectionEnv() *PostgreSQLConnectionEnv {
-	return &PostgreSQLConnectionEnv{
-		Host:   getEnv("PG_HOST", "127.0.0.1"),
-		Port:   getEnv("PG_PORT", "5432"),
-		User:   getEnv("PG_USER", "isucon"),
-		DBName: getEnv("PG_DBNAME", "isuumo"),
+/*====================================================================================*
+ * Utility functions: scan rows as struct
+ *====================================================================================*/
+
+func RowToChair(row *pgx.Row, chair *Chair) error {
+	return (*row).Scan(
+		&chair.ID,
+		&chair.Name,
+		&chair.Description,
+		&chair.Thumbnail,
+		&chair.Price,
+		&chair.Height,
+		&chair.Width,
+		&chair.Depth,
+		&chair.Color,
+		&chair.Features,
+		&chair.Kind,
+		&chair.Popularity,
+		&chair.Stock,
+	)
+}
+
+func RowsToChair(rows *pgx.Rows, chair *Chair) error {
+	return (*rows).Scan(
+		&chair.ID,
+		&chair.Name,
+		&chair.Description,
+		&chair.Thumbnail,
+		&chair.Price,
+		&chair.Height,
+		&chair.Width,
+		&chair.Depth,
+		&chair.Color,
+		&chair.Features,
+		&chair.Kind,
+		&chair.Popularity,
+		&chair.Stock,
+	)
+}
+
+func ScanChairs(rows *pgx.Rows, chairs *[]Chair) error {
+	for (*rows).Next() {
+		chair := Chair{}
+		err := RowsToChair(rows, &chair)
+		if err != nil {
+			return err
+		}
+		*chairs = append(*chairs, chair)
 	}
+	return (*rows).Err()
+}
+
+func RowToEstate(row *pgx.Row, estate *Estate) error {
+	return (*row).Scan(
+		&estate.ID,
+		&estate.Name,
+		&estate.Description,
+		&estate.Thumbnail,
+		&estate.Address,
+		&estate.Latitude,
+		&estate.Longitude,
+		&estate.Rent,
+		&estate.DoorHeight,
+		&estate.DoorWidth,
+		&estate.Features,
+		&estate.Popularity,
+	)
+}
+
+func RowsToEstate(rows *pgx.Rows, estate *Estate) error {
+	return (*rows).Scan(
+		&estate.ID,
+		&estate.Name,
+		&estate.Description,
+		&estate.Thumbnail,
+		&estate.Address,
+		&estate.Latitude,
+		&estate.Longitude,
+		&estate.Rent,
+		&estate.DoorHeight,
+		&estate.DoorWidth,
+		&estate.Features,
+		&estate.Popularity,
+	)
+}
+
+func ScanEstates(rows *pgx.Rows, estates *[]Estate) error {
+	for (*rows).Next() {
+		estate := Estate{}
+		err := RowsToEstate(rows, &estate)
+		if err != nil {
+			return err
+		}
+		*estates = append(*estates, estate)
+	}
+	return (*rows).Err()
+}
+
+/*====================================================================================*
+ * Utility functions: getters
+ *====================================================================================*/
+
+func getRange(cond RangeCondition, rangeID string) (*Range, error) {
+	RangeIndex, err := strconv.Atoi(rangeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if RangeIndex < 0 || len(cond.Ranges) <= RangeIndex {
+		return nil, fmt.Errorf("Unexpected Range ID")
+	}
+
+	return cond.Ranges[RangeIndex], nil
+}
+
+func (cs Coordinates) getBoundingBox() BoundingBox {
+	coordinates := cs.Coordinates
+	boundingBox := BoundingBox{
+		TopLeftCorner: Coordinate{
+			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
+		},
+		BottomRightCorner: Coordinate{
+			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
+		},
+	}
+	for _, coordinate := range coordinates {
+		if boundingBox.TopLeftCorner.Latitude > coordinate.Latitude {
+			boundingBox.TopLeftCorner.Latitude = coordinate.Latitude
+		}
+		if boundingBox.TopLeftCorner.Longitude > coordinate.Longitude {
+			boundingBox.TopLeftCorner.Longitude = coordinate.Longitude
+		}
+
+		if boundingBox.BottomRightCorner.Latitude < coordinate.Latitude {
+			boundingBox.BottomRightCorner.Latitude = coordinate.Latitude
+		}
+		if boundingBox.BottomRightCorner.Longitude < coordinate.Longitude {
+			boundingBox.BottomRightCorner.Longitude = coordinate.Longitude
+		}
+	}
+	return boundingBox
 }
 
 func getEnv(key, defaultValue string) string {
@@ -215,10 +356,41 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+/*====================================================================================*
+ * Utility functions: DB connection
+ *====================================================================================*/
+
+func NewDBConnEnv() *DBConnEnv {
+	return &DBConnEnv{
+		Host:   getEnv("DB_HOST", "localhost"),
+		Port:   getEnv("PGPORT", "5432"),
+		User:   getEnv("PGUSER", "isucon"),
+		DBName: getEnv("DB_NAME", "isuumo"),
+	}
+}
+
 //ConnectDB isuumoデータベースに接続する
-func (env *PostgreSQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
-	dsn := fmt.Sprintf("postgres://%v@%v:%v/%v", env.User, env.Host, env.Port, env.DBName)
-	return sqlx.Open("pgx", dsn)
+func (env *DBConnEnv) ConnectDB() (*pgxpool.Pool, error) {
+	connString := fmt.Sprintf(
+		"host=%v port=%v dbname=%v user=%v",
+		env.Host,
+		env.Port,
+		env.DBName,
+		env.User,
+	)
+	return pgxpool.Connect(context.Background(), connString)
+}
+
+/*====================================================================================*
+ * Utility functions: others
+ *====================================================================================*/
+
+func (cs Coordinates) coordinatesToText() string {
+	points := make([]string, 0, len(cs.Coordinates))
+	for _, c := range cs.Coordinates {
+		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
+	}
+	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
 }
 
 func init() {
@@ -236,6 +408,10 @@ func init() {
 	}
 	json.Unmarshal(jsonText, &estateSearchCondition)
 }
+
+/*====================================================================================*
+ * Main function
+ *====================================================================================*/
 
 func main() {
 	// Echo instance
@@ -268,20 +444,23 @@ func main() {
 	e.GET("/api/estate/search/condition", getEstateSearchCondition)
 	e.GET("/api/recommended_estate/:id", searchRecommendedEstateWithChair)
 
-	pgConnectionData = NewPostgreSQLConnectionEnv()
+	pgConnectionData = NewDBConnEnv()
 
 	var err error
-	db, err = pgConnectionData.ConnectDB()
+	pool, err = pgConnectionData.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("DB connection failed : %v", err)
 	}
-	db.SetMaxOpenConns(10)
-	defer db.Close()
+	defer pool.Close()
 
 	// Start server
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_PORT", "1323"))
 	e.Logger.Fatal(e.Start(serverPort))
 }
+
+/*====================================================================================*
+ * Initialization API
+ *====================================================================================*/
 
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "psql", "db")
@@ -297,6 +476,10 @@ func initialize(c echo.Context) error {
 	})
 }
 
+/*====================================================================================*
+ * Chair APIs
+ *====================================================================================*/
+
 func getChairDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -304,8 +487,7 @@ func getChairDetail(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	chair := Chair{}
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -313,9 +495,12 @@ FROM
 WHERE
   id = $1
 `
-	err = db.Get(&chair, query, id)
+
+	chair := Chair{}
+	row := pool.QueryRow(context.Background(), query, id)
+	err = RowToChair(&row, &chair)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Echo().Logger.Infof("requested id's chair not found : %v", id)
 			return c.NoContent(http.StatusNotFound)
 		}
@@ -341,18 +526,20 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer f.Close()
+
 	records, err := csv.NewReader(f).ReadAll()
 	if err != nil {
 		c.Logger().Errorf("failed to read csv: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
+	tx, err := pool.Begin(context.Background())
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background())
+
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
 		id := rm.NextInt()
@@ -372,7 +559,9 @@ func postChair(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec(`
+		_, err := tx.Exec(
+			context.Background(),
+			`
 INSERT INTO isuumo.chair (
   id,
   name,
@@ -409,7 +598,7 @@ INSERT INTO isuumo.chair (
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(context.Background()); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -523,14 +712,14 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := `
+	const searchQuery = `
 SELECT
   *
 FROM
   isuumo.chair
 WHERE
   `
-	countQuery := `
+	const countQuery = `
 SELECT
   COUNT(*)
 FROM
@@ -542,28 +731,36 @@ WHERE
 ORDER BY
   popularity DESC,
   id ASC
-LIMIT $` + strconv.Itoa(len(params)+1) + `
-OFFSET $` + strconv.Itoa(len(params)+2) + `
+LIMIT
+  $` + strconv.Itoa(len(params)+1) + `
+OFFSET
+  $` + strconv.Itoa(len(params)+2) + `
 `
 
 	var res ChairSearchResponse
-	err = db.Get(&res.Count, countQuery+searchCondition, params...)
+	err = pool.QueryRow(context.Background(), countQuery+searchCondition, params...).Scan(&res.Count)
 	if err != nil {
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	chairs := []Chair{}
 	params = append(params, perPage, page*perPage)
-	err = db.Select(&chairs, searchQuery+searchCondition+limitOffset, params...)
+
+	rows, err := pool.Query(context.Background(), searchQuery+searchCondition+limitOffset, params...)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return c.JSON(http.StatusOK, ChairSearchResponse{Count: 0, Chairs: []Chair{}})
 		}
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	chairs := []Chair{}
+	err = ScanChairs(&rows, &chairs)
+	if err != nil {
+		c.Logger().Errorf("searchChairs DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 	res.Chairs = chairs
 
 	return c.JSON(http.StatusOK, res)
@@ -588,15 +785,14 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	tx, err := db.Beginx()
+	tx, err := pool.Begin(context.Background())
 	if err != nil {
 		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background())
 
-	var chair Chair
-	err = tx.QueryRowx(`
+	const chairQuery = `
 SELECT
   *
 FROM
@@ -605,9 +801,12 @@ WHERE
   id = $1
   AND stock > 0
 FOR UPDATE
-`, id).StructScan(&chair)
+`
+	row := tx.QueryRow(context.Background(), chairQuery, id)
+	chair := Chair{}
+	err = RowToChair(&row, &chair)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
@@ -615,20 +814,21 @@ FOR UPDATE
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec(`
+	const updateQuery = `
 UPDATE
   isuumo.chair
 SET
   stock = stock - 1
 WHERE
   id = $1
-`, id)
+`
+	_, err = tx.Exec(context.Background(), updateQuery, id)
 	if err != nil {
 		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(context.Background())
 	if err != nil {
 		c.Echo().Logger.Errorf("transaction commit error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -642,8 +842,7 @@ func getChairSearchCondition(c echo.Context) error {
 }
 
 func getLowPricedChair(c echo.Context) error {
-	var chairs []Chair
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -655,9 +854,9 @@ ORDER BY
   id ASC
 LIMIT $1
 `
-	err := db.Select(&chairs, query, Limit)
+	rows, err := pool.Query(context.Background(), query, Limit)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Logger().Error("getLowPricedChair not found")
 			return c.JSON(http.StatusOK, ChairListResponse{[]Chair{}})
 		}
@@ -665,8 +864,19 @@ LIMIT $1
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	chairs := []Chair{}
+	err = ScanChairs(&rows, &chairs)
+	if err != nil {
+		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
 }
+
+/*====================================================================================*
+ * Estate APIs
+ *====================================================================================*/
 
 func getEstateDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -675,17 +885,20 @@ func getEstateDetail(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	var estate Estate
-	err = db.Get(&estate, `
+	const query = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   id = $1
-`, id)
+`
+
+	row := pool.QueryRow(context.Background(), query, id)
+	estate := Estate{}
+	RowToEstate(&row, &estate)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Echo().Logger.Infof("getEstateDetail estate id %v not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
@@ -694,19 +907,6 @@ WHERE
 	}
 
 	return c.JSON(http.StatusOK, estate)
-}
-
-func getRange(cond RangeCondition, rangeID string) (*Range, error) {
-	RangeIndex, err := strconv.Atoi(rangeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if RangeIndex < 0 || len(cond.Ranges) <= RangeIndex {
-		return nil, fmt.Errorf("Unexpected Range ID")
-	}
-
-	return cond.Ranges[RangeIndex], nil
 }
 
 func postEstate(c echo.Context) error {
@@ -721,18 +921,20 @@ func postEstate(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer f.Close()
+
 	records, err := csv.NewReader(f).ReadAll()
 	if err != nil {
 		c.Logger().Errorf("failed to read csv: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
+	tx, err := pool.Begin(context.Background())
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background())
+
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
 		id := rm.NextInt()
@@ -751,7 +953,8 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec(`
+
+		const query = `
 INSERT INTO isuumo.estate (
   id,
   name,
@@ -778,13 +981,18 @@ INSERT INTO isuumo.estate (
   $10,
   $11,
   $12
-)`, id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+)`
+		_, err := tx.Exec(
+			context.Background(), query,
+			id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight,
+			doorWidth, features, popularity,
+		)
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(context.Background()); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -869,14 +1077,14 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := `
+	const searchQuery = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   `
-	countQuery := `
+	const countQuery = `
 SELECT
   COUNT(*)
 FROM
@@ -893,31 +1101,35 @@ OFFSET $` + strconv.Itoa(len(params)+2) + `
 `
 
 	var res EstateSearchResponse
-	err = db.Get(&res.Count, countQuery+searchCondition, params...)
+	err = pool.QueryRow(context.Background(), countQuery+searchCondition, params...).Scan(&res.Count)
 	if err != nil {
 		c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	estates := []Estate{}
 	params = append(params, perPage, page*perPage)
-	err = db.Select(&estates, searchQuery+searchCondition+limitOffset, params...)
+	rows, err := pool.Query(context.Background(), searchQuery+searchCondition+limitOffset, params...)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
 		}
 		c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	estates := []Estate{}
+	err = ScanEstates(&rows, &estates)
+	if err != nil {
+		c.Logger().Errorf("searchEstates DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 	res.Estates = estates
 
 	return c.JSON(http.StatusOK, res)
 }
 
 func getLowPricedEstate(c echo.Context) error {
-	estates := make([]Estate, 0, Limit)
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -927,12 +1139,19 @@ ORDER BY
   id ASC
 LIMIT $1
 `
-	err := db.Select(&estates, query, Limit)
+	rows, err := pool.Query(context.Background(), query, Limit)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Logger().Error("getLowPricedEstate not found")
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
+		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	estates := []Estate{}
+	err = ScanEstates(&rows, &estates)
+	if err != nil {
 		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -947,8 +1166,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	chair := Chair{}
-	query := `
+	const chairQuery = `
 SELECT
   *
 FROM
@@ -956,9 +1174,11 @@ FROM
 WHERE
   id = $1
 `
-	err = db.Get(&chair, query, id)
+	chair := Chair{}
+	row := pool.QueryRow(context.Background(), chairQuery, id)
+	err = RowToChair(&row, &chair)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			c.Logger().Infof("Requested chair id \"%v\" not found", id)
 			return c.NoContent(http.StatusBadRequest)
 		}
@@ -966,11 +1186,10 @@ WHERE
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var estates []Estate
 	w := chair.Width
 	h := chair.Height
 	d := chair.Depth
-	query = `
+	const estateQuery = `
 SELECT
   *
 FROM
@@ -987,11 +1206,22 @@ ORDER BY
   id ASC
 LIMIT $13
 `
-	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
+	rows, err := pool.Query(
+		context.Background(),
+		estateQuery,
+		w, h, w, d, h, w, h, d, d, w, d, h, Limit,
+	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
+		c.Logger().Errorf("Database execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	estates := []Estate{}
+	err = ScanEstates(&rows, &estates)
+	if err != nil {
 		c.Logger().Errorf("Database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -1012,8 +1242,8 @@ func searchEstateNazotte(c echo.Context) error {
 	}
 
 	b := coordinates.getBoundingBox()
-	estatesInBoundingBox := []Estate{}
-	query := `
+
+	const extractQuery = `
 SELECT
   *
 FROM
@@ -1027,8 +1257,13 @@ ORDER BY
   popularity DESC,
   id ASC
 `
-	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
-	if err == sql.ErrNoRows {
+	rows, err := pool.Query(
+		context.Background(),
+		extractQuery,
+		b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude,
+		b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude,
+	)
+	if err == pgx.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
 		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
 	} else if err != nil {
@@ -1036,23 +1271,34 @@ ORDER BY
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	estatesInBoundingBox := []Estate{}
+	err = ScanEstates(&rows, &estatesInBoundingBox)
+	if err != nil {
+		c.Echo().Logger.Errorf("database execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	estatesInPolygon := []Estate{}
 	for _, estate := range estatesInBoundingBox {
-		validatedEstate := Estate{}
-
 		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
-		query := fmt.Sprintf(`
+		filterQuery := `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
   id = $1
-  AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(%s))
-`, coordinates.coordinatesToText(), point)
-		err = db.Get(&validatedEstate, query, estate.ID)
+  AND ST_Contains(
+    ST_PolygonFromText(` + coordinates.coordinatesToText() + `),
+    ST_GeomFromText(` + point + `)
+  )
+`
+
+		validatedEstate := Estate{}
+		row := pool.QueryRow(context.Background(), filterQuery, estate.ID)
+		err = RowToEstate(&row, &validatedEstate)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == pgx.ErrNoRows {
 				continue
 			} else {
 				c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
@@ -1094,8 +1340,7 @@ func postEstateRequestDocument(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	estate := Estate{}
-	query := `
+	const query = `
 SELECT
   *
 FROM
@@ -1103,9 +1348,12 @@ FROM
 WHERE
   id = $1
 `
-	err = db.Get(&estate, query, id)
+
+	estate := Estate{}
+	row := pool.QueryRow(context.Background(), query, id)
+	err = RowToEstate(&row, &estate)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return c.NoContent(http.StatusNotFound)
 		}
 		c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
@@ -1117,40 +1365,4 @@ WHERE
 
 func getEstateSearchCondition(c echo.Context) error {
 	return c.JSON(http.StatusOK, estateSearchCondition)
-}
-
-func (cs Coordinates) getBoundingBox() BoundingBox {
-	coordinates := cs.Coordinates
-	boundingBox := BoundingBox{
-		TopLeftCorner: Coordinate{
-			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
-		},
-		BottomRightCorner: Coordinate{
-			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
-		},
-	}
-	for _, coordinate := range coordinates {
-		if boundingBox.TopLeftCorner.Latitude > coordinate.Latitude {
-			boundingBox.TopLeftCorner.Latitude = coordinate.Latitude
-		}
-		if boundingBox.TopLeftCorner.Longitude > coordinate.Longitude {
-			boundingBox.TopLeftCorner.Longitude = coordinate.Longitude
-		}
-
-		if boundingBox.BottomRightCorner.Latitude < coordinate.Latitude {
-			boundingBox.BottomRightCorner.Latitude = coordinate.Latitude
-		}
-		if boundingBox.BottomRightCorner.Longitude < coordinate.Longitude {
-			boundingBox.BottomRightCorner.Longitude = coordinate.Longitude
-		}
-	}
-	return boundingBox
-}
-
-func (cs Coordinates) coordinatesToText() string {
-	points := make([]string, 0, len(cs.Coordinates))
-	for _, c := range cs.Coordinates {
-		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
-	}
-	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
 }
