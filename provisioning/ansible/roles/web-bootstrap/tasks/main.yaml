@@ -36,6 +36,14 @@
   become_user: isucon
   command: mv /tmp/isucon10-qualify /home/isucon/isuumo
 
+- name: Deploy hosts information
+  copy:
+    src: "/home/isucon/isuumo/conf/hosts"
+    dest: "/etc/hosts"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
 - name: Deploy nginx.conf
   copy:
     src: "/home/isucon/isuumo/conf/nginx/nginx.conf"
