@@ -31,6 +31,23 @@
     - `bin/deploy.sh`
     - `bin/component/fetch_branch.sh`
 
+## run_bench.sh
+
+### 使用方法
+
+```bash
+./bin/run_bench.sh <target_host>
+```
+
+### 用途
+
+指定したサーバに対してベンチマークを実行する．
+
+### 前提
+
+- 対象ホストでWebサーバが動いている．
+- スクリプトの都合上，ホスト名は`worker1`，`worker2`，`worker3`で設定すること．
+
 ## post_bench.sh
 
 ### 使用方法
