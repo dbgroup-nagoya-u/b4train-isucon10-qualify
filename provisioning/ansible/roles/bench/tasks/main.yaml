@@ -13,7 +13,6 @@
   shell: |
     go build -o ./make_verification_data/main ./make_verification_data/*.go && ./make_verification_data/main -fixture-dir ../webapp/fixture -dest-dir ./result/verification_data -target-url http://localhost:1323
 
-
 - name: Build benchmarker
   become: yes
   become_user: isucon
@@ -23,3 +22,11 @@
     PATH: "/home/isucon/local/go/bin:/home/isucon/local/node/bin:/home/isucon/bin:/home/isucon/.local/bin:/usr/bin:/sbin:/bin"
   shell: |
     make
+
+- name: Deploy hosts information
+  copy:
+    src: "hosts"
+    dest: "/etc/hosts"
+    owner: "root"
+    group: "root"
+    mode: "0644"
