@@ -16,8 +16,8 @@ SERVICE_FILE="${SERVICE_NAME}.${APP_LANG}.service"
 
 # app static files settings
 APP_DIR="${WORKSPACE}/webapp/${APP_LANG}"
-APP_OUT_LOG_PATH="${APP_DIR}/log/app.out"
-APP_ERR_LOG_PATH="${APP_DIR}/log/app.err"
+APP_OUT_LOG_PATH="${APP_DIR}/log/stdout.log"
+APP_ERR_LOG_PATH="${APP_DIR}/log/stderr.log"
 APP_SERVICE_PATH="/etc/systemd/system/${SERVICE_FILE}"
 
 # Nginx static file settings
