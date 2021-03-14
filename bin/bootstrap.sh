@@ -27,7 +27,8 @@ sudo apt-get -qq update && sudo apt-get -qq install -y \
   tcpdump \
   htop \
   fio \
-  zstd
+  zstd \
+  iperf
 
 # kataribe
 go get -u github.com/matsuu/kataribe
