@@ -57,7 +57,7 @@
     - libjpeg-dev
     - libfreetype6-dev
     - libc-client2007e-dev
-    - libxslt-dev
+    - libxslt1-dev
     - libonig-dev
     - libtidy-dev
     - libzip-dev
