@@ -13,4 +13,5 @@ fi
 psql -h ${DB_HOST} -p ${PGPORT} -U ${PGUSER} -d ${DB_NAME} \
   -f "0_Schema.sql" \
   -f "1_DummyEstateData.sql" \
-  -f "2_DummyChairData.sql"
+  -f "2_DummyChairData.sql" \
+  -f "3_PostInitialization.sql"
