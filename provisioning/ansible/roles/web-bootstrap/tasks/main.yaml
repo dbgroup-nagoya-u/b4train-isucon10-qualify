@@ -44,6 +44,22 @@
     group: "root"
     mode: "0644"
 
+- name: Deploy env shellscript
+  copy:
+    src: "/home/isucon/isuumo/conf/env.sh"
+    dest: /home/isucon
+    owner: "isucon"
+    group: "isucon"
+    mode: "0644"
+
+- name: Deploy sysctl
+  copy:
+    src: "/home/isucon/isuumo/conf/sysctl.conf"
+    dest: "/etc/sysctl.conf"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
 - name: Deploy nginx.conf
   copy:
     src: "/home/isucon/isuumo/conf/nginx/nginx.conf"
@@ -87,6 +103,22 @@
   shell: |
       psql -c "CREATE ROLE isucon WITH SUPERUSER CREATEDB LOGIN PASSWORD 'isucon'"
   ignore_errors: yes
+
+- name: Copy basec settings for PostgreSQL
+  copy:
+    src: "/home/isucon/isuumo/conf/postgresql/0_base_settings.conf"
+    dest: "/etc/postgresql/12/main/conf.d/0_base_settings.conf"
+    owner: "postgres"
+    group: "postgres"
+    mode: "0644"
+
+- name: Copy pg_hba.conf
+  copy:
+    src: "/home/isucon/isuumo/conf/postgresql/pg_hba.conf"
+    dest: "/etc/postgresql/12/main/pg_hba.conf"
+    owner: "postgres"
+    group: "postgres"
+    mode: "0640"
 
 - name: Copy .pgpass for password less DB access
   copy:
@@ -156,10 +188,3 @@
   become_user: root
   shell: |
     mkdir -p /www/data && cp -pR /home/isucon/isuumo/webapp/frontend/out/* /www/data
-
-- name: Deploy env shellscript
-  become: yes
-  become_user: isucon
-  copy:
-    src: "/home/isucon/isuumo/conf/env.sh"
-    dest: /home/isucon
