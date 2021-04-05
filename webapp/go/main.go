@@ -896,7 +896,7 @@ WHERE
 
 	row := pool.QueryRow(context.Background(), query, id)
 	estate := Estate{}
-	RowToEstate(&row, &estate)
+	err = RowToEstate(&row, &estate)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.Echo().Logger.Infof("getEstateDetail estate id %v not found", id)
