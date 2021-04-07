@@ -43,6 +43,7 @@
     owner: "root"
     group: "root"
     mode: "0644"
+    remote_src: yes
 
 - name: Deploy env shellscript
   copy:
@@ -51,6 +52,7 @@
     owner: "isucon"
     group: "isucon"
     mode: "0644"
+    remote_src: yes
 
 - name: Deploy sysctl
   copy:
@@ -59,6 +61,7 @@
     owner: "root"
     group: "root"
     mode: "0644"
+    remote_src: yes
 
 - name: Deploy nginx.conf
   copy:
@@ -67,6 +70,7 @@
     owner: "root"
     group: "root"
     mode: "0644"
+    remote_src: yes
 
 - name: Deploy nginx isuumo.conf
   copy:
@@ -75,6 +79,7 @@
     owner: "root"
     group: "root"
     mode: "0644"
+    remote_src: yes
 
 - name: Enable isuumo.config
   file:
@@ -111,6 +116,7 @@
     owner: "postgres"
     group: "postgres"
     mode: "0644"
+    remote_src: yes
 
 - name: Copy pg_hba.conf
   copy:
@@ -119,6 +125,7 @@
     owner: "postgres"
     group: "postgres"
     mode: "0640"
+    remote_src: yes
 
 - name: Copy .pgpass for password less DB access
   copy:
@@ -127,6 +134,7 @@
     owner: "isucon"
     group: "isucon"
     mode: "0600"
+    remote_src: yes
 
 - name: Install Faker for Initialize Data
   become: yes
