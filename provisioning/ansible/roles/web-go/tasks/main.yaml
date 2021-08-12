@@ -10,9 +10,12 @@
     make isuumo
 
 - name: Copy Service file
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/app/isuumo.go.service"
     dest: "/etc/systemd/system"
     owner: "root"
     group: "root"
     mode: "0644"
+    remote_src: yes
