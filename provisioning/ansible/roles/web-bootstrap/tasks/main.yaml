@@ -37,6 +37,8 @@
   command: mv /tmp/isucon10-qualify /home/isucon/isuumo
 
 - name: Deploy hosts information
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/hosts"
     dest: "/etc/hosts"
@@ -45,6 +47,8 @@
     mode: "0644"
 
 - name: Deploy env shellscript
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/env.sh"
     dest: /home/isucon
@@ -53,6 +57,8 @@
     mode: "0644"
 
 - name: Deploy sysctl
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/sysctl.conf"
     dest: "/etc/sysctl.conf"
@@ -61,6 +67,8 @@
     mode: "0644"
 
 - name: Deploy nginx.conf
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/nginx/nginx.conf"
     dest: "/etc/nginx/nginx.conf"
@@ -69,6 +77,8 @@
     mode: "0644"
 
 - name: Deploy nginx isuumo.conf
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/nginx/isuumo.conf"
     dest: "/etc/nginx/sites-available/isuumo.conf"
@@ -77,12 +87,16 @@
     mode: "0644"
 
 - name: Enable isuumo.config
+  become: yes
+  become_user: root
   file:
     path: /etc/nginx/sites-enabled/isuumo.conf
     src: /etc/nginx/sites-available/isuumo.conf
     state: link
 
 - name: Delete default config
+  become: yes
+  become_user: root
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
@@ -105,6 +119,8 @@
   ignore_errors: yes
 
 - name: Copy basec settings for PostgreSQL
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/postgresql/0_base_settings.conf"
     dest: "/etc/postgresql/12/main/conf.d/0_base_settings.conf"
@@ -113,6 +129,8 @@
     mode: "0644"
 
 - name: Copy pg_hba.conf
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/postgresql/pg_hba.conf"
     dest: "/etc/postgresql/12/main/pg_hba.conf"
@@ -121,6 +139,8 @@
     mode: "0640"
 
 - name: Copy .pgpass for password less DB access
+  become: yes
+  become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/postgresql/pgpass"
     dest: "/home/isucon/.pgpass"
