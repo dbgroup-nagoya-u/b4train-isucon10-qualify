@@ -101,9 +101,6 @@ func (c *Client) GetChairDetailFromID(ctx context.Context, id string) (*asset.Ch
 
 	err = checkStatusCode(res, []int{http.StatusOK, http.StatusNotFound})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/chair/:id: レスポンスコードが不正です"))
 	}
 
@@ -175,9 +172,6 @@ func (c *Client) PostChairs(ctx context.Context, chairs []asset.Chair) error {
 
 	err = checkStatusCode(res, []int{http.StatusCreated})
 	if err != nil {
-		if c.isBot {
-			return failure.Translate(err, fails.ErrBot)
-		}
 		return failure.Wrap(err, failure.Message("POST /api/chair: リクエストに失敗しました"))
 	}
 
@@ -243,9 +237,6 @@ func (c *Client) SearchChairsWithQuery(ctx context.Context, q url.Values) (*Chai
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/chair/search: レスポンスコードが不正です"))
 	}
 
@@ -324,9 +315,6 @@ func (c *Client) SearchEstatesWithQuery(ctx context.Context, q url.Values) (*Est
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/estate/search: レスポンスコードが不正です"))
 	}
 
@@ -371,9 +359,6 @@ func (c *Client) SearchEstatesNazotte(ctx context.Context, polygon *Coordinates)
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("POST /api/estate/nazotte: レスポンスコードが不正です"))
 	}
 
@@ -413,9 +398,6 @@ func (c *Client) GetEstateDetailFromID(ctx context.Context, id string) (*asset.E
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/estate/:id: レスポンスコードが不正です"))
 	}
 
@@ -479,9 +461,6 @@ func (c *Client) PostEstates(ctx context.Context, estates []asset.Estate) error 
 
 	err = checkStatusCode(res, []int{http.StatusCreated})
 	if err != nil {
-		if c.isBot {
-			return failure.Translate(err, fails.ErrBot)
-		}
 		return failure.Wrap(err, failure.Message("POST /api/estate: リクエストに失敗しました"))
 	}
 
@@ -508,9 +487,6 @@ func (c *Client) GetLowPricedChair(ctx context.Context) (*ChairsResponse, error)
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/chair/low_priced: レスポンスコードが不正です"))
 	}
 
@@ -550,9 +526,6 @@ func (c *Client) GetLowPricedEstate(ctx context.Context) (*EstatesResponse, erro
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/estate/low_priced: レスポンスコードが不正です"))
 	}
 
@@ -592,9 +565,6 @@ func (c *Client) GetRecommendedEstatesFromChair(ctx context.Context, id int64) (
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return nil, failure.Translate(err, fails.ErrBot)
-		}
 		return nil, failure.Wrap(err, failure.Message("GET /api/recommended_estate/:id: レスポンスコードが不正です"))
 	}
 
@@ -643,17 +613,12 @@ func (c *Client) BuyChair(ctx context.Context, id string) error {
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return failure.Translate(err, fails.ErrBot)
-		}
 		return failure.Wrap(err, failure.Message("POST /api/chair/buy/:id: リクエストに失敗しました"))
 	}
 
 	intid, _ := strconv.ParseInt(id, 10, 64)
 	asset.DecrementChairStock(intid)
-	if !c.isBot {
-		score.IncrementScore()
-	}
+	score.IncrementScore()
 
 	return nil
 }
@@ -683,15 +648,10 @@ func (c *Client) RequestEstateDocument(ctx context.Context, id string) error {
 
 	err = checkStatusCode(res, []int{http.StatusOK})
 	if err != nil {
-		if c.isBot {
-			return failure.Translate(err, fails.ErrBot)
-		}
 		return failure.Wrap(err, failure.Message("POST /api/estate/req_doc/:id: リクエストに失敗しました"))
 	}
 
-	if !c.isBot {
-		score.IncrementScore()
-	}
+	score.IncrementScore()
 
 	return nil
 }

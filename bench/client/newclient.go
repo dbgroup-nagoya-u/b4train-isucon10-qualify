@@ -8,17 +8,11 @@ import (
 	"github.com/isucon10-qualify/isucon10-qualify/bench/parameter"
 )
 
-func NewClient(isBot bool) *Client {
-	var userAgent string
-	if isBot {
-		userAgent = GenerateBotUserAgent()
-	} else {
-		userAgent = GenerateUserAgent()
-	}
+func NewClient() *Client {
+	var userAgent string = GenerateUserAgent()
 
 	return &Client{
 		userAgent: userAgent,
-		isBot:     isBot,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -37,7 +31,6 @@ func NewClient(isBot bool) *Client {
 func NewClientForInitialize() *Client {
 	return &Client{
 		userAgent: "isucon-initialize",
-		isBot:     false,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -55,7 +48,6 @@ func NewClientForInitialize() *Client {
 func NewClientForVerify() *Client {
 	return &Client{
 		userAgent: "isucon-verify",
-		isBot:     false,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -74,7 +66,6 @@ func NewClientForVerify() *Client {
 func NewClientForDraft() *Client {
 	return &Client{
 		userAgent: GenerateUserAgent(),
-		isBot:     false,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{

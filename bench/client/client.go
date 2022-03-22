@@ -14,7 +14,6 @@ import (
 
 type Client struct {
 	userAgent  string
-	isBot      bool
 	httpClient *http.Client
 }
 
@@ -142,7 +141,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	if !c.isBot && res.StatusCode == http.StatusServiceUnavailable {
+	if res.StatusCode == http.StatusServiceUnavailable {
 		return nil, failure.New(fails.ErrTemporary)
 	}
 
