@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"path"
@@ -22,16 +21,16 @@ import (
 )
 
 const (
-	NumOfVerifyChairDetail                = 5
+	NumOfVerifyChairDetail                = 100
 	NumOfVerifyChairSearchCondition       = 1
-	NumOfVerifyChairSearch                = 5
-	NumOfVerifyEstateDetail               = 5
+	NumOfVerifyChairSearch                = 100
+	NumOfVerifyEstateDetail               = 100
 	NumOfVerifyEstateSearchCondition      = 1
-	NumOfVerifyEstateSearch               = 5
+	NumOfVerifyEstateSearch               = 100
 	NumOfVerifyLowPricedChair             = 1
 	NumOfVerifyLowPricedEstate            = 1
-	NumOfVerifyRecommendedEstateWithChair = 5
-	NumOfVerifyEstateNazotte              = 5
+	NumOfVerifyRecommendedEstateWithChair = 100
+	NumOfVerifyEstateNazotte              = 100
 )
 
 var (
@@ -462,16 +461,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyChairDetail; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyChairDetail(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "chair_search_condition")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -481,16 +480,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyChairSearchCondition; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyChairSearchCondition(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "chair_search")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -500,16 +499,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyChairSearch; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyChairSearch(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "estate_detail")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -519,16 +518,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyEstateDetail; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyEstateDetail(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "estate_search_condition")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -538,16 +537,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyEstateSearchCondition; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyEstateSearchCondition(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "estate_search")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -557,16 +556,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyEstateSearch; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyEstateSearch(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "chair_low_priced")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -576,16 +575,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyLowPricedChair; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyLowPricedChair(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "estate_low_priced")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -595,16 +594,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyLowPricedEstate; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyLowPricedEstate(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "recommended_estate_with_chair")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -614,16 +613,16 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyRecommendedEstateWithChair; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyRecommendedEstateWithChair(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
+	wg.Wait()
 
 	snapshotsDirPath = filepath.Join(snapshotsParentsDirPath, "estate_nazotte")
 	snapshots, err = ioutil.ReadDir(snapshotsDirPath)
@@ -633,16 +632,14 @@ func verifyWithSnapshot(ctx context.Context, c *client.Client, snapshotsParentsD
 	} else {
 		for i := 0; i < NumOfVerifyEstateNazotte; i++ {
 			wg.Add(1)
-			r := rand.Intn(len(snapshots))
 			go func(filePath string) {
 				err := verifyEstateNazotte(ctx, c, filePath)
 				if err != nil {
 					fails.Add(err)
 				}
 				wg.Done()
-			}(path.Join(snapshotsDirPath, snapshots[r].Name()))
+			}(path.Join(snapshotsDirPath, snapshots[i].Name()))
 		}
 	}
-
 	wg.Wait()
 }
