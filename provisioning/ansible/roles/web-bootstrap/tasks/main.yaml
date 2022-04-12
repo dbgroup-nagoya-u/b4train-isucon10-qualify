@@ -214,5 +214,10 @@
 - name: Deploy static files
   become: yes
   become_user: root
-  shell: |
-    mkdir -p /www/data && cp -pR /home/isucon/isuumo/webapp/frontend/out/* /www/data
+  copy:
+    src: "/home/isucon/isuumo/webapp/frontend/out/"
+    dest: "/www/data/"
+    owner: "root"
+    group: "root"
+    mode: "preserve"
+    remote_src: yes
