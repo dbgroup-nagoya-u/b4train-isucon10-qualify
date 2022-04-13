@@ -15,6 +15,7 @@
     name: isucon
     uid: 1100
     group: isucon
+    groups: "adm"
     password: $1$SALTsalt$e7jg2tj3sKVpmYXXmivBb0
     home: /home/isucon
     shell: /bin/bash
@@ -31,7 +32,14 @@
     group: root
     mode: 0440
 
-- name: Install Package(Build)
+- name: Upgrade installed packages
+  become: yes
+  become_user: root
+  apt:
+    upgrade: safe
+    update_cache: yes
+
+- name: Install Package (Build)
   become: yes
   become_user: root
   apt:
@@ -64,4 +72,3 @@
     - default-mysql-client
     - default-libmysqlclient-dev
     - python3-pip
-    update_cache: yes

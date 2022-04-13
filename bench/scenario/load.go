@@ -16,7 +16,7 @@ import (
 
 func runEstateSearchWorker(ctx context.Context) {
 
-	c := client.NewClient(false)
+	c := client.NewClient()
 
 	for {
 		r := rand.Intn(100)
@@ -51,7 +51,7 @@ func runEstateSearchWorker(ctx context.Context) {
 
 func runChairSearchWorker(ctx context.Context) {
 
-	c := client.NewClient(false)
+	c := client.NewClient()
 
 	for {
 		r := rand.Intn(100)
@@ -86,7 +86,7 @@ func runChairSearchWorker(ctx context.Context) {
 
 func runEstateNazotteSearchWorker(ctx context.Context) {
 
-	c := client.NewClient(false)
+	c := client.NewClient()
 
 	for {
 		r := rand.Intn(100)
@@ -115,24 +115,6 @@ func runEstateNazotteSearchWorker(ctx context.Context) {
 				t.Stop()
 				return
 			}
-		}
-	}
-}
-
-func runBotWorker(ctx context.Context) {
-
-	c := client.NewClient(true)
-
-	for {
-		go botScenario(ctx, c)
-		r := rand.Intn(parameter.SleepSwingOnBotInterval) - parameter.SleepSwingOnBotInterval*0.5
-		s := parameter.SleepTimeOnBotInterval + time.Duration(r)*time.Millisecond
-		t := time.NewTimer(s)
-		select {
-		case <-t.C:
-		case <-ctx.Done():
-			t.Stop()
-			return
 		}
 	}
 }
@@ -189,9 +171,6 @@ func checkWorkers(ctx context.Context) {
 			for i := 0; i < incWorkers.EstateNazotteSearchWorker; i++ {
 				go runEstateNazotteSearchWorker(ctx)
 			}
-			for i := 0; i < incWorkers.BotWorker; i++ {
-				go runBotWorker(ctx)
-			}
 			for i := 0; i < incWorkers.ChairDraftPostWorker; i++ {
 				go runChairDraftPostWorker(ctx)
 			}
@@ -221,11 +200,6 @@ func Load(ctx context.Context) {
 	// なぞって検索をするシナリオ
 	for i := 0; i < incWorkers.EstateNazotteSearchWorker; i++ {
 		go runEstateNazotteSearchWorker(ctx)
-	}
-
-	// ボットによる検索シナリオ
-	for i := 0; i < incWorkers.BotWorker; i++ {
-		go runBotWorker(ctx)
 	}
 
 	// イスの入稿シナリオ

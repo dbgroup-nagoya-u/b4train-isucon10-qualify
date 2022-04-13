@@ -8,3 +8,4 @@
     - role: web-go
     - role: web-prepare
     - role: bench
+    - role: bootstrap

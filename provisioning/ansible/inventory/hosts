@@ -1,7 +1,7 @@
 [bench]
-192.168.1.50
+b4train-bench.db.is.i.nagoya-u.ac.jp
 
 [competitor]
-192.168.1.51
-192.168.1.52
-192.168.1.53
+b4train-worker1.db.is.i.nagoya-u.ac.jp
+b4train-worker2.db.is.i.nagoya-u.ac.jp
+b4train-worker3.db.is.i.nagoya-u.ac.jp

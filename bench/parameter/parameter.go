@@ -18,14 +18,12 @@ const (
 	SleepSwingOnFailScenario       = 500 // * time.Millisecond
 	SleepTimeOnUserAway            = 500 * time.Millisecond
 	SleepSwingOnUserAway           = 100 // * time.Millisecond
-	SleepTimeOnBotInterval         = 500 * time.Millisecond
-	SleepSwingOnBotInterval        = 100 // * time.Millisecond
 	SleepBeforePostDraft           = 500 * time.Millisecond
 	SleepSwingBeforePostDraft      = 100 // * time.Millisecond
 	ThresholdTimeOfAbandonmentPage = 1000 * time.Millisecond
 	DefaultAPITimeout              = 2000 * time.Millisecond
 	InitializeTimeout              = 60 * time.Second
-	VerifyTimeout                  = 10 * time.Second
+	VerifyTimeout                  = 30 * time.Second
 	DraftTimeout                   = 5 * time.Second
 	LoadTimeout                    = 60 * time.Second
 )
@@ -40,7 +38,6 @@ type incWorkers struct {
 	ChairSearchWorker         int
 	EstateSearchWorker        int
 	EstateNazotteSearchWorker int
-	BotWorker                 int
 	ChairDraftPostWorker      int
 	EstateDraftPostWorker     int
 }
@@ -51,7 +48,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         3,
 		EstateSearchWorker:        3,
 		EstateNazotteSearchWorker: 0,
-		BotWorker:                 0,
 		ChairDraftPostWorker:      0,
 		EstateDraftPostWorker:     0,
 	},
@@ -59,7 +55,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         0,
 		EstateSearchWorker:        0,
 		EstateNazotteSearchWorker: 3,
-		BotWorker:                 0,
 		ChairDraftPostWorker:      0,
 		EstateDraftPostWorker:     0,
 	},
@@ -67,7 +62,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         0,
 		EstateSearchWorker:        0,
 		EstateNazotteSearchWorker: 0,
-		BotWorker:                 5,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -75,7 +69,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -83,7 +76,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -91,7 +83,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -99,7 +90,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -107,7 +97,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -115,7 +104,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -123,7 +111,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -131,7 +118,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},
@@ -139,7 +125,6 @@ var ListOfIncWorkers = []incWorkers{
 		ChairSearchWorker:         1,
 		EstateSearchWorker:        1,
 		EstateNazotteSearchWorker: 1,
-		BotWorker:                 1,
 		ChairDraftPostWorker:      1,
 		EstateDraftPostWorker:     1,
 	},

@@ -1,8 +1,8 @@
 127.0.0.1 localhost
-192.168.1.50 bench
-#192.168.1.51 worker1
-#192.168.1.52 worker2
-#192.168.1.53 worker3
+192.168.207.80 bench
+192.168.207.81 worker1
+192.168.207.82 worker2
+192.168.207.83 worker3
 
 # The following lines are desirable for IPv6 capable hosts
 ::1     ip6-localhost ip6-loopback

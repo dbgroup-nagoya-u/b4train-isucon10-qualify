@@ -1,0 +1,49 @@
+- name: Install common packages
+  become: yes
+  become_user: root
+  apt:
+    name:
+    - git
+    - wget
+    - vim
+    - curl
+    - dnsutils
+    - net-tools
+    - bash-completion
+    - silversearcher-ag
+    - unzip
+    - nginx
+    - dstat
+    - tcpdump
+    - htop
+    - fio
+    - iperf
+
+- name: Install kataribe for analizing App bottleneck
+  become: yes
+  become_user: isucon
+  environment:
+    PATH: "/home/isucon/local/go/bin:/usr/bin:/sbin:/bin"
+  shell: |
+    go get -u github.com/matsuu/kataribe
+
+- name: Copy customized bash settings
+  become: yes
+  become_user: root
+  copy:
+    src: ".bash_customize"
+    dest: /home/isucon/
+    owner: isucon
+    group: isucon
+    mode: 0644
+
+- name: Apply customized bash to isucon user
+  become: yes
+  become_user: isucon
+  blockinfile:
+    marker: "# {mark} ANSIBLE MANAGED BLOCK bootstrap"
+    path: /home/isucon/.bashrc
+    content: |
+      if [ -f ~/.bash_customize ]; then
+        . ~/.bash_customize
+      fi
