@@ -1,0 +1,13 @@
+# use the VIM's macro instead of `less`
+VIM_VER=`vim --version | head -1 | sed 's/^.*\ \([0-9]\)\.\([0-9]\)\ .*$/\1\2/'`
+alias less="/usr/share/vim/vim${VIM_VER}/macros/less.sh"
+
+# modify prompt
+if type __git_ps1 > /dev/null 2>&1 ; then
+  export GIT_PS1_SHOWDIRTYSTATE=true
+  export GIT_PS1_SHOWSTASHSTATE=true
+  export GIT_PS1_SHOWUNTRACKEDFILES=true
+  export GIT_PS1_SHOWUPSTREAM='auto'
+  export GIT_PS1_SHOWCOLORHINTS=true
+fi
+export PS1='\e[01;32m\u@\h\e[0;00m:\w\n:\e[01;31m$(__git_ps1)\e[0;00m \t [EXIT=$?]\n\$ '
