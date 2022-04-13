@@ -210,6 +210,17 @@
   shell: |
     npm run export
 
+- name: Create directory for Web server
+  become: yes
+  become_user: root
+  file:
+    path: "/www/data"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: "755"
+    recurse: yes
+
 - name: Deploy static files
   become: yes
   become_user: root
