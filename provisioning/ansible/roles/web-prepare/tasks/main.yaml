@@ -19,3 +19,12 @@
   uri:
     url: http://localhost/initialize
     method: POST
+
+- name: Copy README for trainees
+  become: yes
+  become_user: root
+  copy:
+    src: "README.md"
+    dest: "/home/isucon/isuumo/"
+    owner: "isucon"
+    group: "isucon"
