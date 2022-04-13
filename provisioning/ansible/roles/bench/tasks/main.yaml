@@ -1,7 +1,9 @@
 - name: Initialize isucon10
   become: yes
   become_user: isucon
-  command: curl -X POST http://localhost/initialize
+  uri:
+    url: http://localhost/initialize
+    method: POST
 
 - name : Snapshot isucon10
   become: yes
