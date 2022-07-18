@@ -1,18 +1,30 @@
 ---
-- name: install xbuild
+
+- name: Create local bin directory
   become: yes
   become_user: isucon
-  git:
-    repo: https://github.com/tagomoris/xbuild.git
-    dest: /tmp/xbuild
-    version: master
+  file:
+    path: /home/isucon/local
+    state: directory
+    mode: '755'
 
 # in B4-training, we assume the use of Go language to run app
 
-- name: Install Go 1.15.8
+- name: Download Go files
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/go-install 1.15.8 /home/isucon/local/go
+  get_url:
+    url: https://go.dev/dl/go1.18.4.linux-amd64.tar.gz
+    dest: /tmp/golang.tar.gz
+    mode: '0644'
+
+- name: Unpack Go Lang binary
+  become: yes
+  become_user: isucon
+  unarchive:
+    src: /tmp/golang.tar.gz
+    dest: /home/isucon/local
+    remote_src: yes
 
 - name: Add PATH for Go
   become: yes
@@ -26,10 +38,28 @@
 
 # the script uses Node to run App
 
-- name: Install Node v14.16.0
+- name: Download Node.js files
   become: yes
   become_user: isucon
-  command: /tmp/xbuild/node-install v14.16.0 /home/isucon/local/node
+  get_url:
+    url: https://nodejs.org/dist/v16.16.0/node-v16.16.0-linux-x64.tar.xz
+    dest: /tmp/nodejs.tar.xz
+    mode: '0644'
+
+- name: Unpack Node.js binary
+  become: yes
+  become_user: isucon
+  unarchive:
+    src: /tmp/nodejs.tar.xz
+    dest: /home/isucon/local
+    remote_src: yes
+
+- name: Rename Node.js directory
+  become: yes
+  become_user: isucon
+  command:
+    cmd: mv node-v16.16.0-linux-x64 node
+    chdir: /home/isucon/local
 
 - name: Add PATH for Node
   become: yes

@@ -25,7 +25,7 @@
   environment:
     PATH: "/home/isucon/local/go/bin:/usr/bin:/sbin:/bin"
   shell: |
-    go get -u github.com/matsuu/kataribe
+    go install github.com/matsuu/kataribe@latest
 
 - name: Copy customized bash settings
   become: yes
