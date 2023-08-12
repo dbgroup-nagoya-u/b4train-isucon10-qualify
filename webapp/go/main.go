@@ -714,7 +714,7 @@ ORDER BY
 
 	estatesInPolygon := make([]Estate, 0, NazotteLimit)
 	for _, estate := range estatesInBoundingBox {
-		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
+		point := fmt.Sprintf("'POINT(%f %f)'", estate.Longitude, estate.Latitude)
 		filterQuery := `
 SELECT
   *
