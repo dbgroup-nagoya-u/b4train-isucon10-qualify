@@ -32,8 +32,8 @@ PGUSER="isucon"
 DB_NAME="isuumo"
 
 # DB static file settings
-PG_LOG_PATH="/var/log/postgresql/postgresql-12-main.log"
-PG_CONF_DIR="/etc/postgresql/12/main"
+PG_LOG_PATH="/var/log/postgresql/postgresql-14-main.log"
+PG_CONF_DIR="/etc/postgresql/14/main"
 PG_BASE_CONF_FILE="0_base_settings.conf"
 PG_BASE_CONF_PATH="${PG_CONF_DIR}/conf.d/${PG_BASE_CONF_FILE}"
 PG_HBA_PATH="${PG_CONF_DIR}/pg_hba.conf"
