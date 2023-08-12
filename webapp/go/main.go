@@ -14,8 +14,8 @@ import (
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 )
 
@@ -238,21 +238,9 @@ INSERT INTO isuumo.chair (
 //
 // http://<FQDN>/api/chair/search
 func searchChairs(c echo.Context) error {
-	conditions := make([]string, 0, 10)
-	params := make([]interface{}, 0, 10)
-	err := parseChairSearchConditions(c, conditions, params)
+	conditions, params, page, perPage, err := parseChairSearchConditions(c)
 	if err != nil {
 		return err
-	}
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
-	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
 	}
 
 	const searchQuery = `
@@ -551,23 +539,9 @@ INSERT INTO isuumo.estate (
 //
 // http://<FQDN>/api/estate/search
 func searchEstates(c echo.Context) error {
-	conditions := make([]string, 0, 10)
-	params := make([]interface{}, 0, 10)
-	err := parseEstateSearchConditions(c, conditions, params)
+	conditions, params, page, perPage, err := parseEstateSearchConditions(c)
 	if err != nil {
 		return err
-	}
-
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
-	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
 	}
 
 	const searchQuery = `

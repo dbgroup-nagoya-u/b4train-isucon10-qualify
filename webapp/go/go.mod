@@ -5,12 +5,12 @@ go 1.20
 require (
 	github.com/georgysavva/scany v1.2.1
 	github.com/jackc/pgx/v4 v4.18.1
-	github.com/labstack/echo v3.3.10+incompatible
+	github.com/labstack/echo/v4 v4.11.1
 	github.com/labstack/gommon v0.4.0
 )
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -27,4 +27,5 @@ require (
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 )
