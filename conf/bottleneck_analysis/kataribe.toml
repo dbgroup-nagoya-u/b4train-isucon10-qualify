@@ -62,63 +62,91 @@ name = "images"
 regexp = '^(GET|HEAD) /images/'
 
 [[bundle]]
-name = "/api/chair/<int:chair_id>"
+name = "GET /api/chair/<int:chair_id>"
 regexp = '^GET /api/chair/\d+'
 
 [[bundle]]
-name = "/api/chair/buy/<int:chair_id>"
+name = "POST /api/chair/buy/<int:chair_id>"
 regexp = '^POST /api/chair/buy/\d+'
 
 [[bundle]]
-name = "/api/estate/req_doc/<int:estate_id>"
+name = "POST /api/estate/req_doc/<int:estate_id>"
 regexp = '^POST /api/estate/req_doc/\d+'
 
 [[bundle]]
-name = "/api/estate/<int:estate_id>"
+name = "GET /api/estate/<int:estate_id>"
 regexp = '^GET /api/estate/\d+'
 
 [[bundle]]
-name = "/api/recommended_estate/<int:chair_id>"
+name = "GET /api/recommended_estate/<int:chair_id>"
 regexp = '^GET /api/recommended_estate/\d+'
 
 [[bundle]]
-name = "/api/estate/search?page=<int>&perPage=<int>&rentRangeId=<int>"
-regexp = '^GET /api/estate/search\?page=\d+&perPage=\d+&rentRangeId=\d+'
+name = "GET /api/chair/search?<conditions>"
+regexp = '^GET /api/chair/search?.+'
 
 [[bundle]]
-name = "/api/estate/search?doorWidthRangeId=<int>&page=<int>&perPage=<int>"
-regexp = '^GET /api/estate/search\?doorWidthRangeId=\d+&page=\d+&perPage=\d+'
+name = "GET /api/estate/search?<conditions>"
+regexp = '^GET /api/estate/search?.+'
 
 [[bundle]]
-name = "/api/chair/search?page=<int>&perPage=<int>&priceRangeId=<int>"
-regexp = '^GET /api/chair/search\?page=\d+&perPage=\d+&priceRangeId=\d+'
+name = "GET /api/chair/search?<conditions_with_features>"
+regexp = '^GET /api/chair/search?.*features.+'
 
 [[bundle]]
-name = "/api/chair/search?heightRangeId=<int>&page=<int>&perPage=<int>"
-regexp = '^GET /api/chair/search\?heightRangeId=\d+&page=\d+&perPage=\d+'
-
-[[bundle]]
-name = "POST /api/chair/buy/<int>"
-regexp = '^POST /api/chair/buy/\d+'
-
-[[bundle]]
-name = "GET /api/chair/search?color=<str>&page=<int>&perPage=<int>"
-regexp = '^GET /api/chair/search\?color=*&page=\d+&perPage=\d+'
-
-[[bundle]]
-name = "GET /api/chair/search?features=<str>&kind=<str>&page=<int>&perPage=<int>"
-regexp = '^GET /api/chair/search\?features=*&kind=*&page=\d+&perPage=\d+'
-
-[[bundle]]
-name = "GET /api/estate/search?doorHeightRangeId=<int>&page=<int>&perPage=<int>"
-regexp = '^GET /api/estate/search\?doorHeightRangeId=\d+&page=\d+&perPage=\d+'
-
-[[bundle]]
-name = "GET /api/chair/search?page=<int>&perPage=<int>&widthRangeId=<int>"
-regexp = '^GET /api/chair/search?page=\d+&perPage=\d+&widthRangeId=\d+'
+name = "GET /api/estate/search?<conditions_with_features>"
+regexp = '^GET /api/estate/search?.*features.+'
 
 # You can replace the part of urls which matched to your regular expressions.
 # For overview of regexp syntax: https://golang.org/pkg/regexp/syntax/
+[[replace]]
+regexp = 'page=\d+'
+replace = 'page=<int>'
+
+[[replace]]
+regexp = 'perPage=\d+'
+replace = 'perPage=<int>'
+
+[[replace]]
+regexp = 'doorHeightRangeId=\d+'
+replace = 'doorHeightRangeId=<int>'
+
+[[replace]]
+regexp = 'doorWidthRangeId=\d+'
+replace = 'doorWidthRangeId=<int>'
+
+[[replace]]
+regexp = 'rentRangeId=\d+'
+replace = 'rentRangeId=<int>'
+
+[[replace]]
+regexp = 'heightRangeId=\d+'
+replace = 'heightRangeId=<int>'
+
+[[replace]]
+regexp = 'widthRangeId=\d+'
+replace = 'widthRangeId=<int>'
+
+[[replace]]
+regexp = 'depthRangeId=\d+'
+replace = 'depthRangeId=<int>'
+
+[[replace]]
+regexp = 'priceRangeId=\d+'
+replace = 'priceRangeId=<int>'
+
+[[replace]]
+regexp = 'kind=[a-zA-Z0-9%]+'
+replace = 'kind=<str>'
+
+[[replace]]
+regexp = 'color=[a-zA-Z0-9%]+'
+replace = 'color=<str>'
+
+[[replace]]
+regexp = 'features=[a-zA-Z0-9%]+'
+replace = 'features=<str>'
+
 #[[replace]]
 #regexp = '/[0-9]+/'
 #replace = '/<num>/'
