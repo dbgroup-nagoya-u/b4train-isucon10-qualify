@@ -14,7 +14,7 @@
   become: yes
   become_user: isucon
   get_url:
-    url: https://go.dev/dl/go1.20.7.linux-amd64.tar.gz
+    url: https://go.dev/dl/go1.21.8.linux-amd64.tar.gz
     dest: /tmp/golang.tar.gz
     mode: '0644'
 
