@@ -12,10 +12,30 @@
 
 ## 想定環境
 
-- OS: Ubuntu 20.04 LTS
-- DB: PostgreSQL 12
-- Webサーバ: Nginx
-- アプリ実装言語: Go
+| 項目 | 値 |
+|:---|:---|
+| OS | Ubuntu 22.04 LTS |
+| DB | PostgreSQL 14 |
+| Webサーバ | Nginx |
+| アプリ実装言語 | Go 1.21.8 |
+
+### サービス稼働用サーバスペック
+
+| 項目 | 値 |
+|:---|:---|
+| CPU | 1 core |
+| RAM | 2 GB |
+| Network IO (LAN) | 1 Gbps |
+| Network IO (WAN) | 100 Mbps |
+
+
+### ベンチマーク用サーバスペック
+
+| 項目 | 値 |
+|:---|:---|
+| CPU | 2 core |
+| RAM | 8 GB |
+| Network IO (WAN) | 100 Mbps |
 
 ## 参考リンク
 
