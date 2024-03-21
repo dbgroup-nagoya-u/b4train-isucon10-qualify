@@ -35,7 +35,7 @@ fi
 # check whether there is a specified branch
 readonly GIT_BRANCH=${1}
 git fetch --quiet origin
-if ! git branch --list "${GIT_BRANCH}" | grep "${GIT_BRANCH}" &> /dev/null; then
+if ! git branch --list --remotes | grep "${GIT_BRANCH}" &> /dev/null; then
   echo "There is no branch: ${GIT_BRANCH}" 1>&2
   exit 1
 fi
