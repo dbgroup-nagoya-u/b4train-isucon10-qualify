@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 )
 
@@ -143,7 +143,7 @@ func (env *DBConnEnv) ConnectDB() (*pgxpool.Pool, error) {
 		env.DBName,
 		env.User,
 	)
-	return pgxpool.Connect(context.Background(), connString)
+	return pgxpool.New(context.Background(), connString)
 }
 
 /*====================================================================================*
