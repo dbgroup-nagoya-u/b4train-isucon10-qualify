@@ -46,7 +46,7 @@ fi
 
 # clear old analysis results
 echo "remove old analysis results"
-rm -rf ${WORKSPACE}/bottleneck_analysis/*
+rm -f ${WORKSPACE}/bottleneck_analysis/*.txt
 
 # create UDF to analyze DB bottleneck
 echo "analyze DB bottleneck"

@@ -3,411 +3,30 @@ package main
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 )
 
 const Limit = 20
 const NazotteLimit = 50
 
+var ctx context.Context
 var pool *pgxpool.Pool
 var pgConnectionData *DBConnEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
-
-/*====================================================================================*
- * Type definitions
- *====================================================================================*/
-
-type InitializeResponse struct {
-	Language string `json:"language"`
-}
-
-type Chair struct {
-	ID          int64  `db:"id" json:"id"`
-	Name        string `db:"name" json:"name"`
-	Description string `db:"description" json:"description"`
-	Thumbnail   string `db:"thumbnail" json:"thumbnail"`
-	Price       int64  `db:"price" json:"price"`
-	Height      int64  `db:"height" json:"height"`
-	Width       int64  `db:"width" json:"width"`
-	Depth       int64  `db:"depth" json:"depth"`
-	Color       string `db:"color" json:"color"`
-	Features    string `db:"features" json:"features"`
-	Kind        string `db:"kind" json:"kind"`
-	Popularity  int64  `db:"popularity" json:"-"`
-	Stock       int64  `db:"stock" json:"-"`
-}
-
-type ChairSearchResponse struct {
-	Count  int64   `json:"count"`
-	Chairs []Chair `json:"chairs"`
-}
-
-type ChairListResponse struct {
-	Chairs []Chair `json:"chairs"`
-}
-
-//Estate 物件
-type Estate struct {
-	ID          int64   `db:"id" json:"id"`
-	Thumbnail   string  `db:"thumbnail" json:"thumbnail"`
-	Name        string  `db:"name" json:"name"`
-	Description string  `db:"description" json:"description"`
-	Latitude    float64 `db:"latitude" json:"latitude"`
-	Longitude   float64 `db:"longitude" json:"longitude"`
-	Address     string  `db:"address" json:"address"`
-	Rent        int64   `db:"rent" json:"rent"`
-	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
-	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
-	Features    string  `db:"features" json:"features"`
-	Popularity  int64   `db:"popularity" json:"-"`
-}
-
-//EstateSearchResponse estate/searchへのレスポンスの形式
-type EstateSearchResponse struct {
-	Count   int64    `json:"count"`
-	Estates []Estate `json:"estates"`
-}
-
-type EstateListResponse struct {
-	Estates []Estate `json:"estates"`
-}
-
-type Coordinate struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type Coordinates struct {
-	Coordinates []Coordinate `json:"coordinates"`
-}
-
-type Range struct {
-	ID  int64 `json:"id"`
-	Min int64 `json:"min"`
-	Max int64 `json:"max"`
-}
-
-type RangeCondition struct {
-	Prefix string   `json:"prefix"`
-	Suffix string   `json:"suffix"`
-	Ranges []*Range `json:"ranges"`
-}
-
-type ListCondition struct {
-	List []string `json:"list"`
-}
-
-type EstateSearchCondition struct {
-	DoorWidth  RangeCondition `json:"doorWidth"`
-	DoorHeight RangeCondition `json:"doorHeight"`
-	Rent       RangeCondition `json:"rent"`
-	Feature    ListCondition  `json:"feature"`
-}
-
-type ChairSearchCondition struct {
-	Width   RangeCondition `json:"width"`
-	Height  RangeCondition `json:"height"`
-	Depth   RangeCondition `json:"depth"`
-	Price   RangeCondition `json:"price"`
-	Color   ListCondition  `json:"color"`
-	Feature ListCondition  `json:"feature"`
-	Kind    ListCondition  `json:"kind"`
-}
-
-type BoundingBox struct {
-	// TopLeftCorner 緯度経度が共に最小値になるような点の情報を持っている
-	TopLeftCorner Coordinate
-	// BottomRightCorner 緯度経度が共に最大値になるような点の情報を持っている
-	BottomRightCorner Coordinate
-}
-
-type DBConnEnv struct {
-	Host   string
-	Port   string
-	User   string
-	DBName string
-}
-
-type RecordMapper struct {
-	Record []string
-
-	offset int
-	err    error
-}
-
-/*====================================================================================*
- * Utility functions: parse record strings to values
- *====================================================================================*/
-
-func (r *RecordMapper) next() (string, error) {
-	if r.err != nil {
-		return "", r.err
-	}
-	if r.offset >= len(r.Record) {
-		r.err = fmt.Errorf("too many read")
-		return "", r.err
-	}
-	s := r.Record[r.offset]
-	r.offset++
-	return s, nil
-}
-
-func (r *RecordMapper) NextInt() int {
-	s, err := r.next()
-	if err != nil {
-		return 0
-	}
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		r.err = err
-		return 0
-	}
-	return i
-}
-
-func (r *RecordMapper) NextFloat() float64 {
-	s, err := r.next()
-	if err != nil {
-		return 0
-	}
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		r.err = err
-		return 0
-	}
-	return f
-}
-
-func (r *RecordMapper) NextString() string {
-	s, err := r.next()
-	if err != nil {
-		return ""
-	}
-	return s
-}
-
-func (r *RecordMapper) Err() error {
-	return r.err
-}
-
-/*====================================================================================*
- * Utility functions: scan rows as struct
- *====================================================================================*/
-
-func RowToChair(row *pgx.Row, chair *Chair) error {
-	return (*row).Scan(
-		&chair.ID,
-		&chair.Name,
-		&chair.Description,
-		&chair.Thumbnail,
-		&chair.Price,
-		&chair.Height,
-		&chair.Width,
-		&chair.Depth,
-		&chair.Color,
-		&chair.Features,
-		&chair.Kind,
-		&chair.Popularity,
-		&chair.Stock,
-	)
-}
-
-func RowsToChair(rows *pgx.Rows, chair *Chair) error {
-	return (*rows).Scan(
-		&chair.ID,
-		&chair.Name,
-		&chair.Description,
-		&chair.Thumbnail,
-		&chair.Price,
-		&chair.Height,
-		&chair.Width,
-		&chair.Depth,
-		&chair.Color,
-		&chair.Features,
-		&chair.Kind,
-		&chair.Popularity,
-		&chair.Stock,
-	)
-}
-
-func ScanChairs(rows *pgx.Rows, chairs *[]Chair) error {
-	for (*rows).Next() {
-		chair := Chair{}
-		err := RowsToChair(rows, &chair)
-		if err != nil {
-			return err
-		}
-		*chairs = append(*chairs, chair)
-	}
-	return (*rows).Err()
-}
-
-func RowToEstate(row *pgx.Row, estate *Estate) error {
-	return (*row).Scan(
-		&estate.ID,
-		&estate.Name,
-		&estate.Description,
-		&estate.Thumbnail,
-		&estate.Address,
-		&estate.Latitude,
-		&estate.Longitude,
-		&estate.Rent,
-		&estate.DoorHeight,
-		&estate.DoorWidth,
-		&estate.Features,
-		&estate.Popularity,
-	)
-}
-
-func RowsToEstate(rows *pgx.Rows, estate *Estate) error {
-	return (*rows).Scan(
-		&estate.ID,
-		&estate.Name,
-		&estate.Description,
-		&estate.Thumbnail,
-		&estate.Address,
-		&estate.Latitude,
-		&estate.Longitude,
-		&estate.Rent,
-		&estate.DoorHeight,
-		&estate.DoorWidth,
-		&estate.Features,
-		&estate.Popularity,
-	)
-}
-
-func ScanEstates(rows *pgx.Rows, estates *[]Estate) error {
-	for (*rows).Next() {
-		estate := Estate{}
-		err := RowsToEstate(rows, &estate)
-		if err != nil {
-			return err
-		}
-		*estates = append(*estates, estate)
-	}
-	return (*rows).Err()
-}
-
-/*====================================================================================*
- * Utility functions: getters
- *====================================================================================*/
-
-func getRange(cond RangeCondition, rangeID string) (*Range, error) {
-	RangeIndex, err := strconv.Atoi(rangeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if RangeIndex < 0 || len(cond.Ranges) <= RangeIndex {
-		return nil, fmt.Errorf("Unexpected Range ID")
-	}
-
-	return cond.Ranges[RangeIndex], nil
-}
-
-func (cs Coordinates) getBoundingBox() BoundingBox {
-	coordinates := cs.Coordinates
-	boundingBox := BoundingBox{
-		TopLeftCorner: Coordinate{
-			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
-		},
-		BottomRightCorner: Coordinate{
-			Latitude: coordinates[0].Latitude, Longitude: coordinates[0].Longitude,
-		},
-	}
-	for _, coordinate := range coordinates {
-		if boundingBox.TopLeftCorner.Latitude > coordinate.Latitude {
-			boundingBox.TopLeftCorner.Latitude = coordinate.Latitude
-		}
-		if boundingBox.TopLeftCorner.Longitude > coordinate.Longitude {
-			boundingBox.TopLeftCorner.Longitude = coordinate.Longitude
-		}
-
-		if boundingBox.BottomRightCorner.Latitude < coordinate.Latitude {
-			boundingBox.BottomRightCorner.Latitude = coordinate.Latitude
-		}
-		if boundingBox.BottomRightCorner.Longitude < coordinate.Longitude {
-			boundingBox.BottomRightCorner.Longitude = coordinate.Longitude
-		}
-	}
-	return boundingBox
-}
-
-func getEnv(key, defaultValue string) string {
-	val := os.Getenv(key)
-	if val != "" {
-		return val
-	}
-	return defaultValue
-}
-
-/*====================================================================================*
- * Utility functions: DB connection
- *====================================================================================*/
-
-func NewDBConnEnv() *DBConnEnv {
-	return &DBConnEnv{
-		Host:   getEnv("DB_HOST", "localhost"),
-		Port:   getEnv("PGPORT", "5432"),
-		User:   getEnv("PGUSER", "isucon"),
-		DBName: getEnv("DB_NAME", "isuumo"),
-	}
-}
-
-//ConnectDB isuumoデータベースに接続する
-func (env *DBConnEnv) ConnectDB() (*pgxpool.Pool, error) {
-	connString := fmt.Sprintf(
-		"host=%v port=%v dbname=%v user=%v",
-		env.Host,
-		env.Port,
-		env.DBName,
-		env.User,
-	)
-	return pgxpool.Connect(context.Background(), connString)
-}
-
-/*====================================================================================*
- * Utility functions: others
- *====================================================================================*/
-
-func (cs Coordinates) coordinatesToText() string {
-	points := make([]string, 0, len(cs.Coordinates))
-	for _, c := range cs.Coordinates {
-		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
-	}
-	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
-}
-
-func init() {
-	jsonText, err := ioutil.ReadFile("../fixture/chair_condition.json")
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-	json.Unmarshal(jsonText, &chairSearchCondition)
-
-	jsonText, err = ioutil.ReadFile("../fixture/estate_condition.json")
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-	json.Unmarshal(jsonText, &estateSearchCondition)
-}
 
 /*====================================================================================*
  * Main function
@@ -444,6 +63,7 @@ func main() {
 	e.GET("/api/estate/search/condition", getEstateSearchCondition)
 	e.GET("/api/recommended_estate/:id", searchRecommendedEstateWithChair)
 
+	ctx = context.Background()
 	pgConnectionData = NewDBConnEnv()
 
 	var err error
@@ -462,6 +82,9 @@ func main() {
  * Initialization API
  *====================================================================================*/
 
+// ベンチマーク用にデータベース内の情報を初期化する．
+//
+// http://<FQDN>/initialize
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "psql", "db")
 	absPath, _ := filepath.Abs(sqlDir)
@@ -480,6 +103,9 @@ func initialize(c echo.Context) error {
  * Chair APIs
  *====================================================================================*/
 
+// 指定したIDの椅子について詳細な情報を取得する．
+//
+// http://<FQDN>/api/chair/:id
 func getChairDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -495,18 +121,18 @@ FROM
 WHERE
   id = $1
 `
+	var chair Chair
+	err = pgxscan.Get(ctx, pool, &chair, query, id)
 
-	chair := Chair{}
-	row := pool.QueryRow(context.Background(), query, id)
-	err = RowToChair(&row, &chair)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			c.Echo().Logger.Infof("requested id's chair not found : %v", id)
 			return c.NoContent(http.StatusNotFound)
 		}
 		c.Echo().Logger.Errorf("Failed to get the chair from id : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
-	} else if chair.Stock <= 0 {
+	}
+	if chair.Stock <= 0 {
 		c.Echo().Logger.Infof("requested id's chair is sold out : %v", id)
 		return c.NoContent(http.StatusNotFound)
 	}
@@ -514,6 +140,9 @@ WHERE
 	return c.JSON(http.StatusOK, chair)
 }
 
+// 新しい椅子を登録する．
+//
+// http://<FQDN>/api/chair
 func postChair(c echo.Context) error {
 	header, err := c.FormFile("chairs")
 	if err != nil {
@@ -533,12 +162,12 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := pool.Begin(context.Background())
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback(context.Background())
+	defer tx.Rollback(ctx)
 
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
@@ -560,7 +189,7 @@ func postChair(c echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 		_, err := tx.Exec(
-			context.Background(),
+			ctx,
 			`
 INSERT INTO isuumo.chair (
   id,
@@ -598,118 +227,20 @@ INSERT INTO isuumo.chair (
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
-	if err := tx.Commit(context.Background()); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
 }
 
+// 指定した検索条件にマッチする椅子の情報を取得する．
+//
+// http://<FQDN>/api/chair/search
 func searchChairs(c echo.Context) error {
-	conditions := make([]string, 0)
-	params := make([]interface{}, 0)
-
-	if c.QueryParam("priceRangeId") != "" {
-		chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if chairPrice.Min != -1 {
-			conditions = append(conditions, "price >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairPrice.Min)
-		}
-		if chairPrice.Max != -1 {
-			conditions = append(conditions, "price < $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairPrice.Max)
-		}
-	}
-
-	if c.QueryParam("heightRangeId") != "" {
-		chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if chairHeight.Min != -1 {
-			conditions = append(conditions, "height >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairHeight.Min)
-		}
-		if chairHeight.Max != -1 {
-			conditions = append(conditions, "height < $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairHeight.Max)
-		}
-	}
-
-	if c.QueryParam("widthRangeId") != "" {
-		chairWidth, err := getRange(chairSearchCondition.Width, c.QueryParam("widthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("widthRangeID invalid, %v : %v", c.QueryParam("widthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if chairWidth.Min != -1 {
-			conditions = append(conditions, "width >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairWidth.Min)
-		}
-		if chairWidth.Max != -1 {
-			conditions = append(conditions, "width < $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairWidth.Max)
-		}
-	}
-
-	if c.QueryParam("depthRangeId") != "" {
-		chairDepth, err := getRange(chairSearchCondition.Depth, c.QueryParam("depthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("depthRangeId invalid, %v : %v", c.QueryParam("depthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if chairDepth.Min != -1 {
-			conditions = append(conditions, "depth >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairDepth.Min)
-		}
-		if chairDepth.Max != -1 {
-			conditions = append(conditions, "depth < $"+strconv.Itoa(len(params)+1))
-			params = append(params, chairDepth.Max)
-		}
-	}
-
-	if c.QueryParam("kind") != "" {
-		conditions = append(conditions, "kind = $"+strconv.Itoa(len(params)+1))
-		params = append(params, c.QueryParam("kind"))
-	}
-
-	if c.QueryParam("color") != "" {
-		conditions = append(conditions, "color = $"+strconv.Itoa(len(params)+1))
-		params = append(params, c.QueryParam("color"))
-	}
-
-	if c.QueryParam("features") != "" {
-		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features LIKE CONCAT('%', '"+f+"', '%')")
-		}
-	}
-
-	if len(conditions) == 0 {
-		c.Echo().Logger.Infof("Search condition not found")
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	conditions = append(conditions, "stock > 0")
-
-	page, err := strconv.Atoi(c.QueryParam("page"))
+	conditions, params, page, perPage, err := parseChairSearchConditions(c)
 	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
-	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
+		return err
 	}
 
 	const searchQuery = `
@@ -726,7 +257,6 @@ FROM
   isuumo.chair
 WHERE
   `
-	searchCondition := strings.Join(conditions, "\n  AND ")
 	limitOffset := `
 ORDER BY
   popularity DESC,
@@ -736,36 +266,75 @@ LIMIT
 OFFSET
   $` + strconv.Itoa(len(params)+2) + `
 `
+	searchCondition := strings.Join(conditions, "\n  AND ")
 
 	var res ChairSearchResponse
-	err = pool.QueryRow(context.Background(), countQuery+searchCondition, params...).Scan(&res.Count)
+	query := countQuery + searchCondition
+	err = pgxscan.Get(ctx, pool, &res.Count, query, params...)
+
 	if err != nil {
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if res.Count <= 0 {
+		return c.JSON(http.StatusOK, ChairSearchResponse{Count: 0, Chairs: []Chair{}})
+	}
 
+	chairs := make([]Chair, 0, perPage)
+	query = searchQuery + searchCondition + limitOffset
 	params = append(params, perPage, page*perPage)
+	err = pgxscan.Select(ctx, pool, &chairs, query, params...)
 
-	rows, err := pool.Query(context.Background(), searchQuery+searchCondition+limitOffset, params...)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.JSON(http.StatusOK, ChairSearchResponse{Count: 0, Chairs: []Chair{}})
-		}
-		c.Logger().Errorf("searchChairs DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	chairs := []Chair{}
-	err = ScanChairs(&rows, &chairs)
 	if err != nil {
 		c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
 	res.Chairs = chairs
-
 	return c.JSON(http.StatusOK, res)
 }
 
+// 価格の低い順に椅子の情報を取得する．
+//
+// http://<FQDN>/api/chair/low_priced
+func getLowPricedChair(c echo.Context) error {
+	const query = `
+SELECT
+  *
+FROM
+  isuumo.chair
+WHERE
+  stock > 0
+ORDER BY
+  price ASC,
+  id ASC
+LIMIT $1
+`
+	chairs := make([]Chair, 0, Limit)
+	err := pgxscan.Select(ctx, pool, &chairs, query, Limit)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.Logger().Error("getLowPricedChair not found")
+			return c.JSON(http.StatusOK, ChairListResponse{[]Chair{}})
+		}
+		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
+}
+
+// 椅子の検索条件の一覧を取得する．
+//
+// http://<FQDN>/api/chair/search/condition
+func getChairSearchCondition(c echo.Context) error {
+	return c.JSON(http.StatusOK, chairSearchCondition)
+}
+
+// 指定したIDの椅子を1つ購入する．
+//
+// http://<FQDN>/api/chair/buy/:id
 func buyChair(c echo.Context) error {
 	m := echo.Map{}
 	if err := c.Bind(&m); err != nil {
@@ -785,12 +354,12 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	tx, err := pool.Begin(context.Background())
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback(context.Background())
+	defer tx.Rollback(ctx)
 
 	const chairQuery = `
 SELECT
@@ -802,11 +371,11 @@ WHERE
   AND stock > 0
 FOR UPDATE
 `
-	row := tx.QueryRow(context.Background(), chairQuery, id)
-	chair := Chair{}
-	err = RowToChair(&row, &chair)
+	var chair Chair
+	err = pgxscan.Get(ctx, pool, &chair, chairQuery, id)
+
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
@@ -822,13 +391,13 @@ SET
 WHERE
   id = $1
 `
-	_, err = tx.Exec(context.Background(), updateQuery, id)
+	_, err = tx.Exec(ctx, updateQuery, id)
 	if err != nil {
 		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	err = tx.Commit(context.Background())
+	err = tx.Commit(ctx)
 	if err != nil {
 		c.Echo().Logger.Errorf("transaction commit error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -837,47 +406,13 @@ WHERE
 	return c.NoContent(http.StatusOK)
 }
 
-func getChairSearchCondition(c echo.Context) error {
-	return c.JSON(http.StatusOK, chairSearchCondition)
-}
-
-func getLowPricedChair(c echo.Context) error {
-	const query = `
-SELECT
-  *
-FROM
-  isuumo.chair
-WHERE
-  stock > 0
-ORDER BY
-  price ASC,
-  id ASC
-LIMIT $1
-`
-	rows, err := pool.Query(context.Background(), query, Limit)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			c.Logger().Error("getLowPricedChair not found")
-			return c.JSON(http.StatusOK, ChairListResponse{[]Chair{}})
-		}
-		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	chairs := []Chair{}
-	err = ScanChairs(&rows, &chairs)
-	if err != nil {
-		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
-}
-
 /*====================================================================================*
  * Estate APIs
  *====================================================================================*/
 
+// 指定したIDの物件の詳細情報を取得する．
+//
+// http://<FQDN>/api/estate/:id
 func getEstateDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -893,12 +428,10 @@ FROM
 WHERE
   id = $1
 `
-
-	row := pool.QueryRow(context.Background(), query, id)
-	estate := Estate{}
-	err = RowToEstate(&row, &estate)
+	var estate Estate
+	err = pgxscan.Get(ctx, pool, &estate, query, id)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			c.Echo().Logger.Infof("getEstateDetail estate id %v not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
@@ -909,6 +442,9 @@ WHERE
 	return c.JSON(http.StatusOK, estate)
 }
 
+// 新しい物件の情報を登録する．
+//
+// http://<FQDN>/api/estate
 func postEstate(c echo.Context) error {
 	header, err := c.FormFile("estates")
 	if err != nil {
@@ -928,12 +464,12 @@ func postEstate(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := pool.Begin(context.Background())
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	defer tx.Rollback(context.Background())
+	defer tx.Rollback(ctx)
 
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
@@ -983,7 +519,7 @@ INSERT INTO isuumo.estate (
   $12
 )`
 		_, err := tx.Exec(
-			context.Background(), query,
+			ctx, query,
 			id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight,
 			doorWidth, features, popularity,
 		)
@@ -992,89 +528,20 @@ INSERT INTO isuumo.estate (
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
-	if err := tx.Commit(context.Background()); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
 }
 
+// 指定した検索条件にマッチする物件の情報を取得する．
+//
+// http://<FQDN>/api/estate/search
 func searchEstates(c echo.Context) error {
-	conditions := make([]string, 0)
-	params := make([]interface{}, 0)
-
-	if c.QueryParam("doorHeightRangeId") != "" {
-		doorHeight, err := getRange(estateSearchCondition.DoorHeight, c.QueryParam("doorHeightRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("doorHeightRangeID invalid, %v : %v", c.QueryParam("doorHeightRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if doorHeight.Min != -1 {
-			conditions = append(conditions, "door_height >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, doorHeight.Min)
-		}
-		if doorHeight.Max != -1 {
-			conditions = append(conditions, "door_height < $"+strconv.Itoa(len(params)+1))
-			params = append(params, doorHeight.Max)
-		}
-	}
-
-	if c.QueryParam("doorWidthRangeId") != "" {
-		doorWidth, err := getRange(estateSearchCondition.DoorWidth, c.QueryParam("doorWidthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("doorWidthRangeID invalid, %v : %v", c.QueryParam("doorWidthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if doorWidth.Min != -1 {
-			conditions = append(conditions, "door_width >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, doorWidth.Min)
-		}
-		if doorWidth.Max != -1 {
-			conditions = append(conditions, "door_width < $"+strconv.Itoa(len(params)+1))
-			params = append(params, doorWidth.Max)
-		}
-	}
-
-	if c.QueryParam("rentRangeId") != "" {
-		estateRent, err := getRange(estateSearchCondition.Rent, c.QueryParam("rentRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("rentRangeID invalid, %v : %v", c.QueryParam("rentRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if estateRent.Min != -1 {
-			conditions = append(conditions, "rent >= $"+strconv.Itoa(len(params)+1))
-			params = append(params, estateRent.Min)
-		}
-		if estateRent.Max != -1 {
-			conditions = append(conditions, "rent < $"+strconv.Itoa(len(params)+1))
-			params = append(params, estateRent.Max)
-		}
-	}
-
-	if c.QueryParam("features") != "" {
-		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', '"+f+"', '%')")
-		}
-	}
-
-	if len(conditions) == 0 {
-		c.Echo().Logger.Infof("searchEstates search condition not found")
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	page, err := strconv.Atoi(c.QueryParam("page"))
+	conditions, params, page, perPage, err := parseEstateSearchConditions(c)
 	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
-	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
-		return c.NoContent(http.StatusBadRequest)
+		return err
 	}
 
 	const searchQuery = `
@@ -1101,33 +568,34 @@ OFFSET $` + strconv.Itoa(len(params)+2) + `
 `
 
 	var res EstateSearchResponse
-	err = pool.QueryRow(context.Background(), countQuery+searchCondition, params...).Scan(&res.Count)
+	query := countQuery + searchCondition
+	err = pgxscan.Get(ctx, pool, &res.Count, query, params...)
+
 	if err != nil {
 		c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if res.Count <= 0 {
+		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+	}
 
+	estates := make([]Estate, 0, perPage)
+	query = searchQuery + searchCondition + limitOffset
 	params = append(params, perPage, page*perPage)
-	rows, err := pool.Query(context.Background(), searchQuery+searchCondition+limitOffset, params...)
+	err = pgxscan.Select(ctx, pool, &estates, query, params...)
+
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
-		}
 		c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	estates := []Estate{}
-	err = ScanEstates(&rows, &estates)
-	if err != nil {
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 	res.Estates = estates
-
 	return c.JSON(http.StatusOK, res)
 }
 
+// 価格の低い順に物件の情報を取得する．
+//
+// http://<FQDN>/api/estate/low_priced
 func getLowPricedEstate(c echo.Context) error {
 	const query = `
 SELECT
@@ -1139,9 +607,11 @@ ORDER BY
   id ASC
 LIMIT $1
 `
-	rows, err := pool.Query(context.Background(), query, Limit)
+	estates := make([]Estate, 0, Limit)
+	err := pgxscan.Select(ctx, pool, &estates, query, Limit)
+
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			c.Logger().Error("getLowPricedEstate not found")
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
@@ -1149,86 +619,56 @@ LIMIT $1
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	estates := []Estate{}
-	err = ScanEstates(&rows, &estates)
-	if err != nil {
-		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
 	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
 }
 
-func searchRecommendedEstateWithChair(c echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.Logger().Infof("Invalid format searchRecommendedEstateWithChair id : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	const chairQuery = `
-SELECT
-  *
-FROM
-  isuumo.chair
-WHERE
-  id = $1
-`
-	chair := Chair{}
-	row := pool.QueryRow(context.Background(), chairQuery, id)
-	err = RowToChair(&row, &chair)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			c.Logger().Infof("Requested chair id \"%v\" not found", id)
-			return c.NoContent(http.StatusBadRequest)
-		}
-		c.Logger().Errorf("Database execution error : %v", err)
+// 指定したIDの物件についての資料請求を処理する．
+//
+// http://<FQDN>/api/estate/req_doc/:id
+func postEstateRequestDocument(c echo.Context) error {
+	m := echo.Map{}
+	if err := c.Bind(&m); err != nil {
+		c.Echo().Logger.Infof("post request document failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	w := chair.Width
-	h := chair.Height
-	d := chair.Depth
-	const estateQuery = `
+	_, ok := m["email"].(string)
+	if !ok {
+		c.Echo().Logger.Info("post request document failed : email not found in request body")
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Echo().Logger.Infof("post request document failed : %v", err)
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	const query = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
-  (door_width >= $1 AND door_height >= $2)
-  OR (door_width >= $3 AND door_height >= $4)
-  OR (door_width >= $5 AND door_height >= $6)
-  OR (door_width >= $7 AND door_height >= $8)
-  OR (door_width >= $9 AND door_height >= $10)
-  OR (door_width >= $11 AND door_height >= $12)
-ORDER BY
-  popularity DESC,
-  id ASC
-LIMIT $13
+  id = $1
 `
-	rows, err := pool.Query(
-		context.Background(),
-		estateQuery,
-		w, h, w, d, h, w, h, d, d, w, d, h, Limit,
-	)
+	var estate Estate
+	err = pgxscan.Get(ctx, pool, &estate, query, id)
+
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.NoContent(http.StatusNotFound)
 		}
-		c.Logger().Errorf("Database execution error : %v", err)
+		c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	estates := []Estate{}
-	err = ScanEstates(&rows, &estates)
-	if err != nil {
-		c.Logger().Errorf("Database execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
+	return c.NoContent(http.StatusOK)
 }
 
+// 指定された領域に存在する物件の情報を取得する．
+//
+// http://<FQDN>/api/estate/nazotte
 func searchEstateNazotte(c echo.Context) error {
 	coordinates := Coordinates{}
 	err := c.Bind(&coordinates)
@@ -1257,30 +697,24 @@ ORDER BY
   popularity DESC,
   id ASC
 `
-	rows, err := pool.Query(
-		context.Background(),
-		extractQuery,
+	estatesInBoundingBox := make([]Estate, 0, NazotteLimit)
+	err = pgxscan.Select(ctx, pool, &estatesInBoundingBox, extractQuery,
 		b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude,
 		b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude,
 	)
-	if err == pgx.ErrNoRows {
-		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
-		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
-	} else if err != nil {
-		c.Echo().Logger.Errorf("database execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 
-	estatesInBoundingBox := []Estate{}
-	err = ScanEstates(&rows, &estatesInBoundingBox)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.Echo().Logger.Infof("select * from estate where latitude ...", err)
+			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+		}
 		c.Echo().Logger.Errorf("database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	estatesInPolygon := []Estate{}
+	estatesInPolygon := make([]Estate, 0, NazotteLimit)
 	for _, estate := range estatesInBoundingBox {
-		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
+		point := fmt.Sprintf("'POINT(%f %f)'", estate.Longitude, estate.Latitude)
 		filterQuery := `
 SELECT
   *
@@ -1294,19 +728,17 @@ WHERE
   )
 `
 
-		validatedEstate := Estate{}
-		row := pool.QueryRow(context.Background(), filterQuery, estate.ID)
-		err = RowToEstate(&row, &validatedEstate)
+		var validatedEstate Estate
+		err = pgxscan.Get(ctx, pool, &validatedEstate, filterQuery, estate.ID)
 		if err != nil {
-			if err == pgx.ErrNoRows {
+			if errors.Is(err, pgx.ErrNoRows) {
 				continue
-			} else {
-				c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
-				return c.NoContent(http.StatusInternalServerError)
 			}
-		} else {
-			estatesInPolygon = append(estatesInPolygon, validatedEstate)
+			c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
+			return c.NoContent(http.StatusInternalServerError)
 		}
+
+		estatesInPolygon = append(estatesInPolygon, validatedEstate)
 	}
 
 	var re EstateSearchResponse
@@ -1321,48 +753,75 @@ WHERE
 	return c.JSON(http.StatusOK, re)
 }
 
-func postEstateRequestDocument(c echo.Context) error {
-	m := echo.Map{}
-	if err := c.Bind(&m); err != nil {
-		c.Echo().Logger.Infof("post request document failed : %v", err)
+// 物件の検索条件の一覧を取得する．
+//
+// http://<FQDN>/api/estate/search/condition
+func getEstateSearchCondition(c echo.Context) error {
+	return c.JSON(http.StatusOK, estateSearchCondition)
+}
+
+// 指定したIDの椅子を搬入可能な物件の情報を取得する．
+//
+// http://<FQDN>/api/recommended_estate/:id
+func searchRecommendedEstateWithChair(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Logger().Infof("Invalid format searchRecommendedEstateWithChair id : %v", err)
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	const chairQuery = `
+SELECT
+  *
+FROM
+  isuumo.chair
+WHERE
+  id = $1
+`
+	var chair Chair
+	err = pgxscan.Get(ctx, pool, &chair, chairQuery, id)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.Logger().Infof("Requested chair id \"%v\" not found", id)
+			return c.NoContent(http.StatusBadRequest)
+		}
+		c.Logger().Errorf("Database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, ok := m["email"].(string)
-	if !ok {
-		c.Echo().Logger.Info("post request document failed : email not found in request body")
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.Echo().Logger.Infof("post request document failed : %v", err)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	const query = `
+	w := chair.Width
+	h := chair.Height
+	d := chair.Depth
+	const estateQuery = `
 SELECT
   *
 FROM
   isuumo.estate
 WHERE
-  id = $1
+  (door_width >= $1 AND door_height >= $2)
+  OR (door_width >= $3 AND door_height >= $4)
+  OR (door_width >= $5 AND door_height >= $6)
+  OR (door_width >= $7 AND door_height >= $8)
+  OR (door_width >= $9 AND door_height >= $10)
+  OR (door_width >= $11 AND door_height >= $12)
+ORDER BY
+  popularity DESC,
+  id ASC
+LIMIT $13
 `
+	estates := make([]Estate, 0, Limit)
+	err = pgxscan.Select(ctx, pool, &estates, estateQuery,
+		w, h, w, d, h, w, h, d, d, w, d, h, Limit,
+	)
 
-	estate := Estate{}
-	row := pool.QueryRow(context.Background(), query, id)
-	err = RowToEstate(&row, &estate)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.NoContent(http.StatusNotFound)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
-		c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
+		c.Logger().Errorf("Database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	return c.NoContent(http.StatusOK)
-}
-
-func getEstateSearchCondition(c echo.Context) error {
-	return c.JSON(http.StatusOK, estateSearchCondition)
+	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
 }

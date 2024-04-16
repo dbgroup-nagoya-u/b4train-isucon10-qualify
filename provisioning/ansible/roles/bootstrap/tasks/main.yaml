@@ -47,3 +47,14 @@
       if [ -f ~/.bash_customize ]; then
         . ~/.bash_customize
       fi
+
+- name: Create basic SSH user settings
+  become: yes
+  become_user: isucon
+  blockinfile:
+    create: yes
+    marker: "# {mark} ANSIBLE MANAGED BLOCK bootstrap"
+    path: /home/isucon/.ssh/config
+    content: |
+      AddKeysToAgent yes
+      ServerAliveInterval 60

@@ -106,13 +106,13 @@
     path: /etc/nginx/sites-enabled/default
     state: absent
 
-- name: Install PostgreSQL 12
+- name: Install PostgreSQL 14
   become: yes
   become_user: root
   apt:
     name:
-    - postgresql-12
-    - postgresql-12-postgis-3
+    - postgresql-14
+    - postgresql-14-postgis-3
     - libpq-dev
 
 - name: Create isucon user on PostgreSQL
@@ -127,7 +127,7 @@
   become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/postgresql/0_base_settings.conf"
-    dest: "/etc/postgresql/12/main/conf.d/0_base_settings.conf"
+    dest: "/etc/postgresql/14/main/conf.d/0_base_settings.conf"
     owner: "postgres"
     group: "postgres"
     mode: "0644"
@@ -138,7 +138,7 @@
   become_user: root
   copy:
     src: "/home/isucon/isuumo/conf/postgresql/pg_hba.conf"
-    dest: "/etc/postgresql/12/main/pg_hba.conf"
+    dest: "/etc/postgresql/14/main/pg_hba.conf"
     owner: "postgres"
     group: "postgres"
     mode: "0640"

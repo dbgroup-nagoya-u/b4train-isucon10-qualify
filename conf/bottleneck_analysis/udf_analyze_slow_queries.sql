@@ -33,20 +33,20 @@ BEGIN
         ORDER BY
           CASE
             WHEN order_by = 'calls' THEN stat.calls
-            WHEN order_by = 'total_time' THEN stat.total_time
-            WHEN order_by = 'mean_time' THEN stat.mean_time
-            WHEN order_by = 'stddev_time' THEN stat.stddev_time
-            ELSE stat.max_time
+            WHEN order_by = 'total_time' THEN stat.total_exec_time
+            WHEN order_by = 'mean_time' THEN stat.mean_exec_time
+            WHEN order_by = 'stddev_time' THEN stat.stddev_exec_time
+            ELSE stat.max_exec_time
           END
         DESC
       ),
       regexp_replace(stat.query, '\([, $0-9()"a-z_]+\)','(*)'),
       stat.calls,
-      to_char(stat.total_time, '99999.999'),
-      to_char(stat.mean_time, '9999.999'),
-      to_char(stat.stddev_time, '9999.999'),
-      to_char(stat.min_time, '9999.999'),
-      to_char(stat.max_time, '9999.999'),
+      to_char(stat.total_exec_time, '99999.999'),
+      to_char(stat.mean_exec_time, '9999.999'),
+      to_char(stat.stddev_exec_time, '9999.999'),
+      to_char(stat.min_exec_time, '9999.999'),
+      to_char(stat.max_exec_time, '9999.999'),
       stat.rows,
       stat.shared_blks_hit,
       stat.shared_blks_read,

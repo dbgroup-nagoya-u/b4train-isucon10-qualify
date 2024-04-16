@@ -1,4 +1,11 @@
 ---
+- name: Start "postgresql"
+  systemd:
+    daemon_reload: "yes"
+    name: "postgresql"
+    state: "restarted"
+    enabled: "yes"
+
 - name: Start "isuumo.go.service"
   systemd:
     daemon_reload: "yes"
