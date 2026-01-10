@@ -40,7 +40,7 @@ func Report(msgs []string, critical, application, trivial int) error {
 
 	mu.RLock()
 	defer mu.RUnlock()
-	bytes, err := json.Marshal(stdout)
+	bytes, err := json.MarshalIndent(stdout, "", "  ")
 	if err != nil {
 		return err
 	}
