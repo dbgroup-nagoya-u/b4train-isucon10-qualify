@@ -3,7 +3,6 @@ package fails
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 
 	"github.com/morikuni/failure"
@@ -99,8 +98,6 @@ func Add(err error) {
 	if critical > 0 || application >= 10 {
 		failChan <- true
 	}
-
-	log.Printf("%+v", err)
 }
 
 func Fail() chan bool {
