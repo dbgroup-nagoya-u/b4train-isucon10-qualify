@@ -24,11 +24,3 @@
     PATH: "/home/isucon/local/go/bin:/home/isucon/local/node/bin:/home/isucon/bin:/home/isucon/.local/bin:/usr/bin:/sbin:/bin"
   shell: |
     make
-
-- name: Deploy hosts information
-  copy:
-    src: "hosts"
-    dest: "/etc/hosts"
-    owner: "root"
-    group: "root"
-    mode: "0644"
